@@ -1,0 +1,16 @@
+#Create Autoscaling Policy to scale up 
+aws autoscaling put-scaling-policy --policy-name evise-fpu4-sit2-scaleout-policy --auto-scaling-group-name ASG --scaling-adjustment 1 --adjustment-type ChangeInCapacity 
+
+#Pin CW Alarm to Autoscaling Policy to scale up 
+aws cloudwatch put-metric-alarm --alarm-name AddCapacitySit2FPU4 --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 100 --comparison-operator GreaterThanOrEqualToThreshold --dimensions Name=QueueName,Value=sit2-event-queue-GenerateConsolidatedPDF --evaluation-periods 2 --alarm-actions arn
+
+#Create Autoscaling Policy to scale down
+aws autoscaling put-scaling-policy --policy-name evise-fpu4-sit2-scalein-policy --auto-scaling-group-name ASG --scaling-adjustment -1 --adjustment-type ChangeInCapacity
+
+#Pin CW Alarm to Autoscaling Policy to scale down
+aws cloudwatch put-metric-alarm --alarm-name RemoveCapacitySit2FPU4 --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 0 --comparison-operator LessThanOrEqualToThreshold --dimensions Name=QueueName,Value=sit2-event-queue-GenerateConsolidatedPDF  --evaluation-periods 2 --alarm-actions arn
+ 
+ 
+  
+ aws cloudwatch delete-alarms --alarm-name AddCapacitySit2FPU4
+ aws cloudwatch delete-alarms --alarm-name RemoveCapacitySit2FPU4

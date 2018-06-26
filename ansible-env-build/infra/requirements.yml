@@ -1,0 +1,74 @@
+---
+
+- name: oid
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-oid.git
+  scm: git
+
+- name: db
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-db-grid.git
+  scm: git
+  
+- name: adf
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-adf.git
+  scm: git
+  
+- name: adf-admin
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-adf-admin.git
+  scm: git
+
+- name: adf-managed
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-adf-managed.git
+  scm: git
+  
+- name: soa
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-soa.git
+  scm: git
+
+- name: soa-admin
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-soa-admin.git
+  scm: git
+
+- name: soa-managed
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-soa-managed.git
+  scm: git
+  
+- name: osb
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-osb.git
+  scm: git
+
+- name: osb-admin
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-osb-admin.git
+  scm: git
+
+- name: osb-managed
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-osb-managed.git
+  scm: git
+
+- name: bpm-admin
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-bpm-admin.git
+  scm: git
+  
+- name: bpm
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-bpm.git
+  scm: git
+
+- name: bpm-managed
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-bpm-managed.git
+  scm: git
+
+- name: ohs
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-ohs.git
+  scm: git
+
+- name: oem-agent
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-oem-agent.git
+  scm: git
+  
+- name: oem-config
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-oem-config.git
+  scm: git
+
+- name: users
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-perf-users.git
+  scm: git
+  

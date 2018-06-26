@@ -1,0 +1,84 @@
+#!/bin/ksh
+
+set -e
+
+umask 077
+
+[[ -n "$1" ]] && cd "$1"
+
+[[ -r security/SerializedSystemIni.dat ]] || {
+    echo >&2 "Can't read security/SerializedSystemIni.dat"
+    exit 1
+}
+
+domainName="$(sed -n '/^  <name>/{s///;s!</name>!!p;}' config/config.xml)"
+if [[ -n "$2" ]]
+then
+    outDir="$2"
+else
+    outDir="/tmp/$LOGNAME/$domainName"
+    mkdir -p "$outDir"
+    rm -rf "$outDir"/*
+fi
+
+fileList="$(find config -name '*.xml'|xargs egrep -l '{3DES}|{AES}')"
+echo "$fileList" | while read fname
+do
+    sed -n  '/{3DES}/{s/.*{3DES}/{3DES}/;s!</.*!!p;}' $fname
+    sed -n  '/{AES}/{s/.*{AES}/{AES}/;s!</.*!!p;}' $fname
+done | sort -u > "$outDir/encPWs"
+echo >> "$outDir/encPWs"
+
+#####################################################
+# Adjust to suit your current WebLogic installation #
+#####################################################
+envfile=$(ls /fs01/app/bea/wlserver1*/w*/server/bin/setWLSEnv.sh | tail -1)
+if [[ "$envfile" = '/fs01/app/bea/wlserver1*/w*/server/bin/setWLSEnv.sh' ]]
+then
+    envfile=$(ls /fs01/app/bea/wlserver9*/w*/server/bin/setWLSEnv.sh | tail -1)
+fi
+if [[ "$envfile" = '/fs01/app/bea/wlserver9*/w*/server/bin/setWLSEnv.sh' ]]
+then
+    echo >&2 "Can't find /fs01/app/bea/wlserver9*/w*/server/bin/setWLSEnv.sh or /fs01/app/bea/wlserver9*/w*/server/bin/setWLSEnv.sh, giving up"
+    exit 1
+fi
+. $envfile > /dev/null
+#####################################################
+
+py=$(mktemp)
+cat > $py <<'eNd'
+from weblogic.security.internal import *
+from weblogic.security.internal.encryption import *
+
+encryptionService = SerializedSystemIni.getEncryptionService("security")
+clearOrEncryptService = ClearOrEncryptedService(encryptionService)
+
+resultList = []
+
+while 1:
+    pwd = raw_input()
+    if pwd == '':
+        break
+
+    # Remove unnecessary escape characters
+    preppwd = pwd.replace("\\", "")
+
+    # Decrypt the password
+    # print "Recovered password is: " + clearOrEncryptService.decrypt(preppwd)
+    resultList.append('s£%s£%s£g' % (preppwd, clearOrEncryptService.decrypt(preppwd).replace('$', '\\$')))
+    #print preppwd + " " + clearOrEncryptService.decrypt(preppwd)
+print ';'.join(resultList)
+
+eNd
+sedsub="$(set -x ; java weblogic.WLST $py < "$outDir/encPWs" | egrep '{3DES}|{AES}')"
+echo "$sedsub"|tr ';' '\n'
+#exit
+
+echo "$fileList" | cpio -pmud "$outDir"
+echo "$fileList" | (cd "$outDir" && xargs rm)
+echo "$fileList" | while read fname
+do
+    sed < $fname > "$outDir/$fname" -e "$sedsub"
+done
+echo "output directory is:\n$outDir"
+rm $py

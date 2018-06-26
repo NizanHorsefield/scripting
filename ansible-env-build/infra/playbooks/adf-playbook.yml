@@ -1,0 +1,10 @@
+---
+
+- hosts: tag_Role_adf_admin,tag_Role_adf_managed
+  roles:
+    - role: adf
+
+- hosts: tag_Role_adf_admin
+  roles:
+    - role: adf-admin
+  

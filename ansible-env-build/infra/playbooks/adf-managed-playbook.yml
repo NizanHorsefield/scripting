@@ -1,0 +1,5 @@
+---
+
+- hosts: tag_Role_adf_managed
+  roles:
+    - role: adf-managed

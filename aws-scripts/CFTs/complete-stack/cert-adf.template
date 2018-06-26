@@ -1,0 +1,346 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create adf instances for Certification environment. Creates network interface with multiple dynamic IP addresses(via dhcp). Creates Route 53 A Record sets. Uses RHEL6.3 AMI. Security Group for Instance is created through sg-evise-cert stack. Installation Media Binary Files are attached as EBS volume using snapshot (snap-ee4a1c09), which will be deleted on instance Termination. Instance Root volume won't be deleted on instance Termination. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"adf1AMIID": {
+			"Description": "AMI ID for adf1 Instance",
+			"Type": "String",
+			"Default": "ami-5565a522"
+		},
+		"adf2AMIID": {
+			"Description": "AMI ID for adf2 Instance",
+			"Type": "String",
+			"Default": "ami-7965a50e"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for certification Instances",
+			"Default": "m1.xlarge",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-adf",
+			"Default": "sg-9b9e84f9",
+			"Type": "String"
+		},
+		"SecondaryIPAddressCount1a" : {
+			"Type" : "Number",
+			"Default" : "5",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		},
+		"SecondaryIPAddressCount1b" : {
+			"Type" : "Number",
+			"Default" : "4",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		}
+	},
+	"Resources" : {
+		"adf1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "adf1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-adf1-cert"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0adf1"}, "DeviceIndex" : "0" } ]
+			}
+	    },
+		"Eth0adf1" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"adf1-cert-nic"}],
+				"Description": "NIC for adf1 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1a" }
+			}
+		},
+		"adf2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "adf2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ { "Key" : "Name","Value":"evise-adf2-cert"} ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0adf2"}, "DeviceIndex" : "0"  } ]
+			}
+		},
+		"Eth0adf2" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"adf2-cert-nic"}],
+				"Description": "NIC for adf2 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1b" }
+			}
+		},
+		"adf101DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf1 primary IP",
+				"Name" : "cert-evise-wc-adminserver.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0adf1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"adf102DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf1 secondary IP",
+				"Name" : "cert-evise-wc-nextees1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0adf1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"adf103DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf1 secondary IP",
+				"Name" : "cert-evise-wc-collaboration1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "1", { "Fn::GetAtt" : ["Eth0adf1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"adf104DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf1 secondary IP",
+				"Name" : "cert-evise-wc-portlet1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "2", { "Fn::GetAtt" : ["Eth0adf1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"adf105DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf1 secondary IP",
+				"Name" : "cert-evise-wc-eviseadmin1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "3", { "Fn::GetAtt" : ["Eth0adf1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"adf106DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf1 secondary IP",
+				"Name" : "cert-evise-wc-nm1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "4", { "Fn::GetAtt" : ["Eth0adf1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"adf107DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf1 primary IP",
+				"Name" : "evise-adf1-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0adf1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"adf201DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf2 primary IP",
+				"Name" : "cert-evise-wc-nextees2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0adf2", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"adf202DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf2 secondary IP",
+				"Name" : "cert-evise-wc-collaboration2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0adf2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"adf203DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf2 secondary IP",
+				"Name" : "cert-evise-wc-portlet2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "1", { "Fn::GetAtt" : ["Eth0adf2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"adf204DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf2 secondary IP",
+				"Name" : "cert-evise-wc-eviseadmin2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "2", { "Fn::GetAtt" : ["Eth0adf2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"adf205DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf2 secondary IP",
+				"Name" : "cert-evise-wc-nm2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "3", { "Fn::GetAtt" : ["Eth0adf2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"adf206DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for adf2 primary IP",
+				"Name" : "evise-adf2-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0adf2", "PrimaryPrivateIpAddress"] } ]
+			}
+		}
+	},
+	"Outputs" : {
+		"adf1InstanceID" : {
+			"Value" : { "Ref" : "adf1" },
+			"Description" : "Instance Id of adf1 instance"
+		},
+		"adf2InstanceID" : {
+			"Value" : { "Ref" : "adf2" },
+			"Description" : "Instance Id of adf2 instance"
+		},
+		"adf101PrimaryIPurl" : {
+			"Description" : "DNS record of the adf1 primary ip",
+			"Value" :  { "Ref" :  "adf101DNSRecord" }
+		},
+		"adf102SecondaryIP1url" : {
+			"Description" : "DNS record of the adf1 secondary ip 1",
+			"Value" :  { "Ref" :  "adf102DNSRecord" }
+		},
+		"adf103SecondaryIP2url" : {
+			"Description" : "DNS record of the adf1 secondary ip 2",
+			"Value" :  { "Ref" :  "adf103DNSRecord" }
+		},
+		"adf104SecondaryIP3url" : {
+			"Description" : "DNS record of the adf1 secondary ip 3",
+			"Value" :  { "Ref" :  "adf104DNSRecord" }
+		},
+		"adf105SecondaryIP4url" : {
+			"Description" : "DNS record of the adf1 secondary ip 4",
+			"Value" :  { "Ref" :  "adf105DNSRecord" }
+		},
+		"adf106SecondaryIP5url" : {
+			"Description" : "DNS record of the adf1 secondary ip 5",
+			"Value" :  { "Ref" :  "adf106DNSRecord" }
+		},
+		"adf107PrimaryIPurl" : {
+			"Description" : "DNS record of the adf1 primary ip",
+			"Value" :  { "Ref" :  "adf107DNSRecord" }
+		},
+		"adf201PrimaryIPurl" : {
+			"Description" : "DNS record of the adf2 primary ip",
+			"Value" :  { "Ref" :  "adf201DNSRecord" }
+		},
+		"adf202SecondaryIP1url" : {
+			"Description" : "DNS record of the adf2 secondary ip 1",
+			"Value" :  { "Ref" :  "adf202DNSRecord" }
+		},
+		"adf203SecondaryIP2url" : {
+			"Description" : "DNS record of the adf2 secondary ip 2",
+			"Value" :  { "Ref" :  "adf203DNSRecord" }
+		},
+		"adf204SecondaryIP3url" : {
+			"Description" : "DNS record of the adf2 secondary ip 3",
+			"Value" :  { "Ref" :  "adf204DNSRecord" }
+		},
+		"adf205SecondaryIP4url" : {
+			"Description" : "DNS record of the adf2 secondary ip 4",
+			"Value" :  { "Ref" :  "adf205DNSRecord" }
+		},
+		"adf206PrimaryIPurl" : {
+			"Description" : "DNS record of the adf2 primary ip",
+			"Value" :  { "Ref" :  "adf206DNSRecord" }
+		}
+	}
+}

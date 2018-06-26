@@ -1,0 +1,60 @@
+#!/bin/ksh
+
+
+# Author: Eric Lee
+# $Revision:: 14845                                                     $
+# $Date:: 2012-07-04 17:49:15 +0100 (Wed, 04 Jul 2012)                  $
+# $LastChangedDate:: 2012-07-04 17:49:15 +0100 (Wed, 04 Jul 2012)       $
+# $Author:: eric.lee                                                    $
+# $HeadURL: http://cm302/middleware_svn/swipE/trunk/prototypes/utils/outfilemanager $
+#
+
+PS4='[$LINENO]+ '
+[[ -n "$SCRIPT_DEBUG" ]] && set -x
+[[ $- = *x* ]] && export SCRIPT_DEBUG=y
+
+uid=$(id)
+uid=${uid%%\)*}
+uid=${uid##*\(}
+
+cmd=${0##*/}
+
+outfile=/tmp/$cmd-$uid
+if [[ -n "$(fuser $outfile 2>/dev/null)" ]]
+then
+    echo >&2 "ERROR: $outfile is in use. Another instance is probably already running"
+    exit 1
+fi
+
+exec > $outfile 2>&1
+set -x
+date
+
+keep=10
+pattern='*.out'
+noaction=-n
+noaction=
+verbose=
+verbose=-v
+
+#(
+#    set -o noglob
+#    find /fs01/app/a0949 /fs01/log/a0949 -name $pattern -user $uid
+#) |  sed 's!/[^/]*$!!' | sort -u | while read dir
+
+ls 2>/dev/null -d /fs01/app/*/wlserver*/domain/servers/*/logs /fs01/app/*/*/wlserver*/domain/servers/*/logs /fs01/log/*/ams/wlserver101/scripts | while read dir
+do
+    cd $dir && [[ $uid = root || -O . ]] || continue
+    if [[ ! -f logadm.conf ]]
+    then
+	set -- $(ls -ld .)
+	: > logadm.conf
+	chown $3:$4 logadm.conf
+	set --
+    fi
+    [[ -n "$vervose" ]] && echo ======================== $PWD
+    # > logadm.conf
+    /usr/sbin/logadm $noaction $verbose -f logadm.conf -c -s 10m -S 100m  -t '$file.%Y%m%d-%H%M%S' -- $pattern
+    # also need to deal with .out files from previous runs
+    ls -t *.out????? | sed "1,${keep}d" | xargs -t -n50 rm
+done

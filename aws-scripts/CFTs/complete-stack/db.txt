@@ -1,0 +1,82 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create DataBase EC2 instances for certification environment",
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"AMIID": {
+			"Description": "AMI ID for certification Instances",
+			"Type": "String",
+			"Default": "ami-2025d357"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for Certification Instances",
+			"Default": "m2.4xlarge",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"CertDBServerSg": {
+			"Description": "Security Group for DBServer instance",
+			"Default": "sg-9e9e84fc",
+			"Type": "String"
+		}
+	},
+	"Resources" : {
+		"db1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"Tags": [ {"Key" : "Name","Value":"evise-db001-cert"},{"Key" : "CreationDate","Value":"10Feb2014"}],
+				"BlockDeviceMappings" : [ {
+					"DeviceName" : "/dev/sda1",
+					"Ebs" : { "VolumeSize" : "800" } 
+				} ],
+				"SecurityGroupIds" : [{ "Ref" : "CertDBServerSg" } ],
+				"SubnetId" : {"Ref" : "Subnet1A" },
+				"KeyName" : { "Ref" : "KeyName" },
+				"UserData" : { "Fn::Base64" : { "Fn::Join" : ["",[
+				"#!/bin/bash -v","\n",
+				"cd /root","\n",
+				"resize2fs /dev/sda1"	]	] 	}  }
+			}
+		},
+		"db2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"Tags": [ {"Key" : "Name","Value":"evise-db002-cert"},{"Key" : "CreationDate","Value":"10Feb2014"}],
+				"SecurityGroupIds" : [{ "Ref" : "CertDBServerSg" } ],
+				"BlockDeviceMappings" : [ {
+					"DeviceName" : "/dev/sda1",
+					"Ebs" : { "VolumeSize" : "800" } 
+				} ],
+				"SubnetId" : {"Ref" : "Subnet1B" },
+				"KeyName" : { "Ref" : "KeyName" },
+				"UserData" : { "Fn::Base64" : { "Fn::Join" : ["",[
+				"#!/bin/bash -v","\n",
+				"cd /root","\n",
+				"resize2fs /dev/sda1"	]	] 	}  }
+            }
+	    }
+	}
+}

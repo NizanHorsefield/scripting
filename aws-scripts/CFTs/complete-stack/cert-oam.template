@@ -1,0 +1,346 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create oam instances for Certification environment. Creates network interface with multiple dynamic IP addresses(via dhcp). Creates Route 53 A & CNAME Record sets. Uses RHEL5.9 AMI. Security Groups for Instance & ELB are created through sg-evise-cert stack & evise-cert-elb-sg stack respectively. Installation Media Binary Files are attached as EBS volume using snapshot (snap-ee4a1c09), which will be deleted on instance termination. Instance Root volume won't be deleted on instance Termination. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"oam1AMIID": {
+			"Description": "AMI ID for oam1 Instance",
+			"Type": "String",
+			"Default": "ami-3b65a54c"
+		},
+		"oam2AMIID": {
+			"Description": "AMI ID for oam2 Instance",
+			"Type": "String",
+			"Default": "ami-6965a51e"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for certification Instances",
+			"Default": "m1.xlarge",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-oam",
+			"Default": "sg-9d9e84ff",
+			"Type": "String"
+		},
+		"SecondaryIPAddressCount1a" : {
+			"Type" : "Number",
+			"Default" : "5",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		},
+		"SecondaryIPAddressCount1b" : {
+			"Type" : "Number",
+			"Default" : "4",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		}
+	},
+	"Resources" : {
+		"oam1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "oam1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-oam1-cert"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0oam1"}, "DeviceIndex" : "0" } ]
+			}
+	    },
+		"Eth0oam1" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"oam1-cert-nic"}],
+				"Description": "NIC for oam1 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1a" }
+			}
+		},
+		"oam2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "oam2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ { "Key" : "Name","Value":"evise-oam2-cert"} ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0oam2"}, "DeviceIndex" : "0"  } ]
+			}
+		},
+		"Eth0oam2" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"oam2-cert-nic"}],
+				"Description": "NIC for oam2 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1b" }
+			}
+		},
+		"oam101DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam1 primary IP",
+				"Name" : "cert-evise-iam-adminserver.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0oam1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"oam102DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam1 secondary IP",
+				"Name" : "cert-evise-iam-oam1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0oam1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"oam103DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam1 secondary IP",
+				"Name" : "cert-evise-iam-oim1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "1", { "Fn::GetAtt" : ["Eth0oam1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"oam104DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam1 secondary IP",
+				"Name" : "cert-evise-iam-soa1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "2", { "Fn::GetAtt" : ["Eth0oam1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"oam105DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam1 secondary IP",
+				"Name" : "cert-evise-iam-odsm1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "3", { "Fn::GetAtt" : ["Eth0oam1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"oam106DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam1 secondary IP",
+				"Name" : "cert-evise-iam-nm1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "4", { "Fn::GetAtt" : ["Eth0oam1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"oam107DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam1 primary IP",
+				"Name" : "evise-oam1-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0oam1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"oam201DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam2 primary IP",
+				"Name" : "cert-evise-iam-oam2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0oam2", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"oam202DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam2 secondary IP",
+				"Name" : "cert-evise-iam-oim2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0oam2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"oam203DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam2 secondary IP",
+				"Name" : "cert-evise-iam-soa2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "1", { "Fn::GetAtt" : ["Eth0oam2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"oam204DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam2 secondary IP",
+				"Name" : "cert-evise-iam-odsm2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "2", { "Fn::GetAtt" : ["Eth0oam2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"oam205DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam2 secondary IP",
+				"Name" : "cert-evise-iam-nm2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "3", { "Fn::GetAtt" : ["Eth0oam2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"oam206DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oam2 primary IP",
+				"Name" : "evise-oam2-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0oam2", "PrimaryPrivateIpAddress"] } ]
+			}
+		}
+	},
+	"Outputs" : {
+		"oam1InstanceID" : {
+			"Value" : { "Ref" : "oam1" },
+			"Description" : "Instance Id of oam1 instance"
+		},
+		"oam2InstanceID" : {
+			"Value" : { "Ref" : "oam2" },
+			"Description" : "Instance Id of oam2 instance"
+		},
+		"oam1PrimaryIPurl" : {
+			"Description" : "DNS record of the oam1 primary ip",
+			"Value" :  { "Ref" :  "oam101DNSRecord" }
+		},
+		"oam1hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the oam1 primary ip",
+			"Value" :  { "Ref" :  "oam107DNSRecord" }
+		},
+		"oam1SecondaryIP1url" : {
+			"Description" : "DNS record of the oam1 secondary ip 1",
+			"Value" :  { "Ref" :  "oam102DNSRecord" }
+		},
+		"oam1SecondaryIP2url" : {
+			"Description" : "DNS record of the oam1 secondary ip 2",
+			"Value" :  { "Ref" :  "oam103DNSRecord" }
+		},
+		"oam1SecondaryIP3url" : {
+			"Description" : "DNS record of the oam1 secondary ip 3",
+			"Value" :  { "Ref" :  "oam104DNSRecord" }
+		},
+		"oam1SecondaryIP4url" : {
+			"Description" : "DNS record of the oam1 secondary ip 4",
+			"Value" :  { "Ref" :  "oam105DNSRecord" }
+		},
+		"oam1SecondaryIP5url" : {
+			"Description" : "DNS record of the oam1 secondary ip 4",
+			"Value" :  { "Ref" :  "oam106DNSRecord" }
+		},
+		"oam2PrimaryIPurl" : {
+			"Description" : "DNS record of the oam2 primary ip",
+			"Value" :  { "Ref" :  "oam201DNSRecord" }
+		},
+		"oam2hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the oam2 primary ip",
+			"Value" :  { "Ref" :  "oam206DNSRecord" }
+		},
+		"oam2SecondaryIP1url" : {
+			"Description" : "DNS record of the oam2 secondary ip 1",
+			"Value" :  { "Ref" :  "oam202DNSRecord" }
+		},
+		"oam2SecondaryIP2url" : {
+			"Description" : "DNS record of the oam2 secondary ip 2",
+			"Value" :  { "Ref" :  "oam203DNSRecord" }
+		},
+		"oam2SecondaryIP3url" : {
+			"Description" : "DNS record of the oam2 secondary ip 3",
+			"Value" :  { "Ref" :  "oam204DNSRecord" }
+		},
+		"oam2SecondaryIP4url" : {
+			"Description" : "DNS record of the oam2 secondary ip 3",
+			"Value" :  { "Ref" :  "oam205DNSRecord" }
+		}
+	}
+}

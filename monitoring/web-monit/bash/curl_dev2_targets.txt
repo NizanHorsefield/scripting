@@ -1,0 +1,13 @@
+DEV2_EP_Checks External ProfileUX /profile/api/ping
+DEV2_EP_Checks External JournalAdminUX /journal-admin/api/ping
+DEV2_EP_Checks External CoauthorUX /co-author/api/ping
+DEV2_EP_Checks External AuthorUX /author/api/ping
+DEV2_EP_Checks External TaxonomyUX /taxonomy/api/ping
+DEV2_EP_Checks External EdRevRecUX /editor/reviewer/recommender/api/ping
+DEV2_EP_Checks External EditorUX /editor/api/ping
+DEV2_EP_Checks Internal ProfileMicroService /profile/
+DEV2_EP_Checks Internal AdminProfileMicroService /admin-profile/ping
+DEV2_EP_Checks Internal SubCoauthorMicroService /submission/co-author/ping
+DEV2_EP_Checks Internal CoauthorMicroService /co-author/ping
+DEV2_EP_Checks Internal TaxonomyMicroService/taxonomy/ping
+DEV2_EP_Checks Internal AuditMicroService /audit/ping

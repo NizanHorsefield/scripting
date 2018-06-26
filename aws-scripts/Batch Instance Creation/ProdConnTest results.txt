@@ -1,0 +1,68 @@
+telnet i-oid.evise-cloud.com 26874
+telnet prod-evise-nees1.evise-cloud.com 1521
+ftp ftp.sciencedirect.com 
+NSddfm_user
+PPmZ456H
+
+Batch1
+FTP
+[oracle@prod-evise-batch1 ~]$ ftp ftp.sciencedirect.com
+Connected to ftp.sciencedirect.com (207.24.44.65).
+220 Microsoft FTP Service
+Name (ftp.sciencedirect.com:oracle): NSddfm_user
+331 Password required for NSddfm_user.
+Password:
+230-Individuals using this computer system without or in excess of their authority may be subject to punitive actions. All activities on this system are subject to monitoring and recording by the system administrators.
+ Anyone using this system expressly consents to such monitoring and is advised that if such monitoring reveals possible evidence of criminal activity, system personnel may provide the evidence of such monitoring to law enforcement officials.
+230 User NSddfm_user logged in.
+Remote system type is Windows_NT.
+ftp> ls
+227 Entering Passive Mode (207,24,44,65,52,45)
+125 Data connection already open; Transfer starting.
+-r--r--r--   1 owner    group           37992 Sep 21  7:37 DFM_ACCT_20150920.TXT.ZIP
+-r--r--r--   1 owner    group           35226 Sep 22  7:39 DFM_ACCT_20150921.TXT.ZIP
+
+
+DB
+[oracle@prod-evise-batch1 ~]$ telnet prod-evise-nees1.evise-cloud.com 1521
+Trying 10.178.238.14...
+Connected to prod-evise-nees1.evise-cloud.com.
+Escape character is '^]'.
+
+
+LDAP
+[oracle@prod-evise-batch1 ~]$ telnet i-oid.evise-cloud.com 26874
+Trying 10.178.238.93...
+Connected to i-oid.evise-cloud.com.
+Escape character is '^]'.
+
+Batch2
+FTP
+[oracle@prod-evise-batch2 ~]$ ftp ftp.sciencedirect.com
+Connected to ftp.sciencedirect.com (207.24.44.65).
+220 Microsoft FTP Service
+Name (ftp.sciencedirect.com:oracle): NSddfm_user
+331 Password required for NSddfm_user.
+Password:
+230-Individuals using this computer system without or in excess of their authority may be subject to punitive actions. All activities on this system are subject to monitoring and recording by the system administrators.
+ Anyone using this system expressly consents to such monitoring and is advised that if such monitoring reveals possible evidence of criminal activity, system personnel may provide the evidence of such monitoring to law enforcement officials.
+230 User NSddfm_user logged in.
+Remote system type is Windows_NT.
+ftp> ls
+227 Entering Passive Mode (207,24,44,65,252,173)
+125 Data connection already open; Transfer starting.
+-r--r--r--   1 owner    group           37992 Sep 21  7:37 DFM_ACCT_20150920.TXT.ZIP
+-r--r--r--   1 owner    group         
+
+DB
+[oracle@prod-evise-batch2 ~]$ telnet prod-evise-nees1.evise-cloud.com 1521
+Trying 10.178.238.14...
+Connected to prod-evise-nees1.evise-cloud.com.
+Escape character is '^]'.
+
+LDAP
+[oracle@prod-evise-batch2 ~]$ telnet i-oid.evise-cloud.com 26874
+Trying 10.178.238.167...
+Connected to i-oid.evise-cloud.com.
+Escape character is '^]'.
+

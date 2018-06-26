@@ -1,0 +1,41 @@
+#!/bin/ksh
+
+# Author: Eric Lee
+# $Revision:: 8981                                                      $
+# $Date:: 2011-07-15 14:27:25 +0100 (Fri, 15 Jul 2011)                  $
+# $LastChangedDate:: 2011-07-15 14:27:25 +0100 (Fri, 15 Jul 2011)       $
+# $Author:: eric.lee                                                    $
+# $HeadURL: http://cm302/middleware_svn/swipE/trunk/prototypes/wlserver/10.3.4/generic/domain/bin/backgrounder $
+
+
+uid=$(id)
+uid=${uid%%\)*}
+uid=${uid#*\(}
+
+envUser=dv411
+domaintype=ams
+
+PATH=/fs01/app/$envUser/$domaintype/wlserver101/domain/bin:$PATH
+NOHUP=nohup
+[[ -x /usr/xpg4/bin/nohup ]] && NOHUP=/usr/xpg4/bin/nohup
+
+file=$(mktemp)
+
+outfile=${1##*/}
+outfile=${outfile%.sh}-$2.out
+outdir=/fs01/log/$envUser/$domaintype/wlserver101/scripts
+mkdir -p $outdir
+outfile=$outdir/$outfile
+: > $outfile
+echo >&2 "Output re-directed to $outfile"
+
+echo "#!/bin/ksh
+$NOHUP $@  >> $outfile 2>&1 &
+sleep 2" > $file
+
+chmod +x $file
+
+scriptout=$(mktemp)
+SHELL=$file script $scriptout
+cat $scriptout
+rm $scriptout $file

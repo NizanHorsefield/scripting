@@ -1,0 +1,59 @@
+pipeline {
+ agent { label 'master' }
+ options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    gitLabConnection('gitlab')
+ }
+
+ environment {
+        EC2_INI_PATH = './inventory/config/dev1/ec2.ini'
+    }
+
+ stages {
+
+   stage('Delete directory') {
+        steps {
+            sh 'rm -rf ./rap-terraformcontrol-evise ./terraform.tfstate.backup ./terraform.tfvars ./variables.tf ./dev1-build.tf ./.terraform ./.ansible'
+
+        }
+    }
+
+    stage('Clone TIO repo') {
+        steps {
+            sh 'git clone git@gitlab.et-scm.com:tio-rap-london/rap-terraformcontrol-evise.git'
+        }
+    }
+    stage('Initialise Terraform') {
+        steps {
+            sh '. ~/.aws.sh 2>/dev/null'
+            sh 'terraform init ./rap-terraformcontrol-evise/885289476053/dev1-perf/build/'
+        }
+    }
+
+    stage('Stage1 - Initialise Build') {
+        steps {
+            parallel(
+				  "Initialise Ansible": {
+				      sh 'rm -rf ./.ansible'
+                      sh 'chmod +x ./inventory/ec2.py'
+                      sh '/usr/local/bin/ansible-galaxy install -r ./requirements.yml'
+				  },
+				  "Prove Connectivity": {
+					sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/initialise-build.yml'
+
+				  },
+			)
+        }
+    }
+
+    stage('Stage1 - configure DB') {
+        steps {
+            parallel(
+				  "Install db": {
+					sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/db-playbook.yml'
+				  },
+			)
+        }
+    }
+  }
+}

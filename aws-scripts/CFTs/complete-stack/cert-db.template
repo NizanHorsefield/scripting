@@ -1,0 +1,165 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create database instances for Certification environment. Creates network interface with dynamic IP address(via dhcp). Creates Route 53 A Record sets. Uses RHEL6.3 AMI. Security Group for Instance is created through sg-evise-cert stack. Installation Media Binary Files are attached as EBS volume using snapshot (snap-ee4a1c09), which will be deleted on instance Termination. Instance Root volume won't be deleted on instance Termination. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"db1AMIID": {
+			"Description": "AMI ID for db nees Instance",
+			"Type": "String",
+			"Default": "ami-780bd40b"
+		},
+		"db2AMIID": {
+			"Description": "AMI ID for db eiam Instance",
+			"Type": "String",
+			"Default": "ami-530ad520"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for Certification Instances",
+			"Default": "m2.4xlarge",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "cert eu-west-1a instance subnet ",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "cert eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-dbserver",
+			"Default": "sg-2c00fe49",
+			"Type": "String"
+		}
+	},
+	"Resources" : {
+		"db1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "db1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-db-nees-cert"}, {"Key" : "Environment","Value":"CERT"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "40", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName" : "/dev/sdh",
+						"Ebs" : { "VolumeSize" : "1024", "DeleteOnTermination":"false" } 
+					}
+				],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+		},
+		"db2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "db2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-db-eiam-cert"}, {"Key" : "Environment","Value":"CERT"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "40", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName" : "/dev/sdh",
+						"Ebs" : { "VolumeSize" : "1024", "DeleteOnTermination":"false" } 
+					}
+				],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"KeyName" : { "Ref" : "KeyName" }
+            }
+	    },
+		"db101DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for db nees primary IP",
+				"Name" : "cert-nees-db-a.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "db1", "PrivateIp" ] } ]
+			}
+		},
+		"db102DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for db nees primary IP",
+				"Name" : "evise-db-nees-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "db1", "PrivateIp" ] } ]
+			}
+		},
+		"db201DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for db eiam primary IP",
+				"Name" : "cert-eiam-db-a.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "db2", "PrivateIp" ] } ]
+			}
+		},
+		"db202DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for db eiam primary IP",
+				"Name" : "evise-db-eiam-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "db2", "PrivateIp" ] } ]
+			}
+		}
+	},
+	"Outputs" : {
+		"db1InstanceID" : {
+			"Value" : { "Ref" : "db1" },
+			"Description" : "Instance Id of db1 instance"
+		},
+		"db2InstanceID" : {
+			"Value" : { "Ref" : "db2" },
+			"Description" : "Instance Id of db2 instance"
+		},
+		"db101PrimaryIPurl" : {
+			"Description" : "DNS record of the db1 primary ip",
+			"Value" :  { "Ref" :  "db101DNSRecord" }
+		},
+		"db102PrimaryIPurl" : {
+			"Description" : "DNS record of the db1 primary ip",
+			"Value" :  { "Ref" :  "db102DNSRecord" }
+		},
+		"db201PrimaryIPurl" : {
+			"Description" : "DNS record of the db2 primary ip",
+			"Value" :  { "Ref" :  "db201DNSRecord" }
+		},
+		"db202PrimaryIPurl" : {
+			"Description" : "DNS record of the db2 primary ip",
+			"Value" :  { "Ref" :  "db202DNSRecord" }
+		}
+	}
+}

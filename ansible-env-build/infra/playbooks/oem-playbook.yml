@@ -1,0 +1,5 @@
+---
+
+- hosts: tag_Role_oem_master
+  roles:
+    - role: oem

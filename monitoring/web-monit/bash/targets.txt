@@ -1,0 +1,6 @@
+Google GoogleNamespace https://www.google.co.uk:443
+Yahoo YahooNamespace https://uk.yahoo.com:443
+AltaVista(haha) AltaNamespace http://www.altavista.com
+Google-http GooHTTPNamespace http://www.google.com:80
+random rnd_Namespace http://erivuneriupvnreuipvuanrv.com
+Stackoverflow SOFNamespace https://stackoverflow.com/questions/9336294/how-do-i-set-up-cloudwatch-to-detect-when-an-ec2-instance-goes-down

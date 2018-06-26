@@ -1,0 +1,9 @@
+---
+
+- hosts: tag_Role_bpm_admin, tag_Role_bpm_managed
+  roles:
+    - role: bpm
+    
+- hosts: tag_Role_bpm_admin
+  roles:
+    - role: bpm-admin

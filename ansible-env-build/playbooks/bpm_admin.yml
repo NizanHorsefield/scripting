@@ -1,0 +1,8 @@
+---
+- hosts: bpm_admin
+  become: true
+  roles:
+    - ansible-role-common
+    - ansible-role-java
+    - ansible-role-weblogic
+    - ansible-role-soa

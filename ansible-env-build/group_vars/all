@@ -1,0 +1,48 @@
+---
+# WebLogic Specific
+#  wl_user: oracle
+#  wl_group: oinstall
+#  wl_user_home: "/home/oracle"
+#  comment: "User to run WebLogic"
+#  tmp_dir: /tmp
+#
+#  # binary locations
+#  binary_base: "/vagrant/binaries"
+#  jdkjarsrc: "{{ binary_base }}/java/jdk-7u80-linux-x64.rpm"
+#  wlsjarsrc: "{{ binary_base }}/wls/wls1036_generic.jar"
+#
+#  silent_wl_file_src: "files/silent.xml"
+#  silent_wl_file_dest: "{{ wl_user_home }}/silent.xml"
+#  oracle_home: "/opt/oracle"
+#  ora_inventory: "{{ oracle_home }}/oraInventory"
+#  middleware_home: "{{ oracle_home }}/middleware"
+#  wl_home: "{{ middleware_home }}/wlserver_10.3"
+#  java_home: "/usr/java/latest"
+#  wl_components: "WebLogic Server/Core Application Server|WebLogic Server/Administration Console|WebLogic Server/Configuration Wizard and Upgrade Framework|WebLogic Server/Web 2.0 HTTP Pub-Sub Server|WebLogic Server/WebLogic JDBC Drivers|WebLogic Server/Third Party JDBC Drivers|WebLogic Server/WebLogic Server Clients|WebLogic Server/WebLogic Web Server Plugins|WebLogic Server/UDDI and Xquery Support|Oracle Coherence/Coherence Product Files"
+
+
+# WebLogic Specific (JJ)
+  fusion_user: oracle
+  fusion_group: oinstall
+  #fusion_user_home: "/home/oracle"
+  fusion_user_home: "/home/oracle"
+  comment: "User to run Fusion middleware"
+  tmp_dir: /tmp
+  software_mount: /vagrant/binaries
+  jdkjarsrc: "{{software_mount}}/java/jdk-7u80-linux-x64.rpm"
+  wlsjarsrc: "{{software_mount}}/wls/wls1036_generic.jar"
+  adfbinarysrc: "{{software_mount}}/appdev"
+  silent_wl_file_src: "files/silent.xml"
+  silent_wl_file_dest: "{{ fusion_user_home }}/silent.xml"
+  fusion_softare_location: "/opt/oracle"
+  ora_inventory: "{{ fusion_softare_location }}/oraInventory"
+  middleware_home: "{{ fusion_softare_location }}/middleware"
+  wl_home: "{{ middleware_home }}/wlserver_10.3"
+  java_home: "/usr/java/jdk1.7.0_80"
+  nodemanager_home: "{{fusion_softare_location}}/nodemanager"
+  wlst_working_directory: "{{fusion_user_home}}/build"
+  deploy_apps_dir: "{{software_mount}}"
+  wl_components: "WebLogic Server/Core Application Server|WebLogic Server/Administration Console|WebLogic Server/Configuration Wizard and Upgrade Framework|WebLogic Server/Web 2.0 HTTP Pub-Sub Server|WebLogic Server/WebLogic JDBC Drivers|WebLogic Server/Third Party JDBC Drivers|WebLogic Server/WebLogic Server Clients|WebLogic Server/WebLogic Web Server Plugins|WebLogic Server/UDDI and Xquery Support|Oracle Coherence/Coherence Product Files"
+
+#OHS params
+  adf_cluster_address: 123.123.123.123:7001

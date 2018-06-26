@@ -1,0 +1,249 @@
+---
+
+# Global Parameters
+  tmp_dir: /dev/shm   # to RAM instead of EBS-disk previously: /tmp
+  software_mount: /els
+  nodemanager_home: "{{ fusion_software_location }}/nodemanager"
+  wlst_working_directory: "{{ fusion_user_home }}/build"
+  deploy_apps_dir: "{{ software_mount }}/apps"
+  before_virus_scan_directory: /els/Before_VirusScan/
+  upload_file_move_dir: /els/EviseUCM/Communication
+  staticports_file: "{{ fusion_user_home }}/staticports.ini"
+  opmn_listen_port: 6700
+  repo_creation_utilty_binary_src: "{{ software_mount }}/rcu/rcuHome"
+  db_service_name: NEESS.cert.aws.com
+  db_business_schema_user: PROD_NEES
+  db_business_schema_password: PRODWIPRO
+  jdbc_jar_location: /opt/app/oracle/product/12.1.0.1/
+  external_lib_source: "{{ software_mount }}/external_libs"
+  common_jvm_mem_args: -XX:+AlwaysPreTouch -XX:NewRatio=1 -XX:ParallelGCThreads=6
+  common_jvm_tuning_args: -Dweblogic.threadpool.MinPoolSize=50 -Dweblogic.threadpool.MaxPoolSize=600
+  common_jvm_setenviroenv_autojavamem_pct: 0.85 # of free mem
+  common_jvm_setenviroenv_autojavathreads_pct: 0.75 # of cpus
+  common_jvm_mem_log_args: -Xloggc:${SERVER_NAME}_gc_${DATETIME}.log -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:GCLogFileSize=10m -XX:NumberOfGCLogFiles=30
+  common_jvm_compile_args: -XX:CompileThreshold=40000 -XX:MaxInlineSize=512 -XX:FreqInlineSize=512 -XX:+PrintCommandLineFlags
+  common_jvm_jfr_args: -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:FlightRecorderOptions=defaultrecording=true,disk=true,dumponexit,repository=${DOMAIN_HOME}/${SERVER_NAME},maxage=12h,settings=profile
+  soa_admin_user: soaadmin
+  soa_admin_password: Elsevier123
+
+  soa_lib_extenstion_dir: "{{ soa_home }}/soa/modules/oracle.soa.ext_11.1.1/"
+  oracle_ant: "{{ middleware_home }}/modules/org.apache.ant_1.7.1/"
+  ant_contrib_jar: "{{ software_mount }}/ant/ant-contrib-1.0b2.jar"
+
+  evise_log_location: /els/app/evise/EviseSOALog
+  evise_app_prop_file_loc: /els/app/evise/EviseSOA
+
+  wl_pack_command: "{{ wl_home }}/common/bin/pack.sh"
+  time_to_wait_for_admin_svr_start: 180
+  composites_version_suffix: 03
+
+  list_of_os_packages_for_32_bit_apps:
+  - libstdc++.i686
+  - glibc.i686
+  - libzip.i686
+
+# JAVA Parameters
+  jdk_rpm: jdk-7u171-linux-x64.rpm
+  jdk_jar_src: "{{ software_mount }}/java/{{ jdk_rpm }}"
+  java_home: "/usr/java/jdk1.7.0_171"
+  unlimited_security_file_location: "{{ software_mount }}/java/UnlimitedJCEPolicy/java7"
+
+# JAVA 8 Parameters
+  jdk8_rpm: jdk-8u60-linux-x64.rpm
+  jdk8_jar_src: "{{ software_mount }}/java/{{ jdk8_rpm }}"
+  java8_home: "/usr/java/jdk1.8.0_60"
+
+# Fusion Parameters
+  fusion_user: oracle
+  fusion_group: oinstall
+  fusion_pass: oracle11g
+  fusion_user_home: "/home/oracle"
+  fusion_software_location: "/opt/oracle"
+  comment: "User to run Fusion middleware"
+  ora_inventory: "{{ fusion_software_location }}/oraInventory"
+  middleware_home: "{{ fusion_software_location }}/middleware"
+  oracle_home: "/opt/oracle/product/oracle_home"
+  oracle_soa_home: "{{ middleware_home }}/oracle_soa"
+  oracle_soa_wlst_command: "{{ oracle_soa_home }}/common/bin/wlst.sh"
+
+
+  # TO DO update all invptrloc with inv_ptr_loc
+  invptrloc: "/etc/oraInst.loc"
+  inv_ptr_loc: "/etc/oraInst.loc"
+  wl_home: "{{ middleware_home }}/wlserver_10.3"
+  wl_jar: " {{ wl_home }}/server/lib/weblogic.jar"
+
+# WLS
+  wls_binary: wls1036_generic.jar
+  wls_jar_src: "{{ software_mount }}/wls/{{ wls_binary }}"
+  silent_wl_file_dest: "{{ fusion_user_home }}/silent.xml"
+  wl_components: "WebLogic Server/Core Application Server|WebLogic Server/WebLogic SCA|WebLogic Server/Administration Console|WebLogic Server/Configuration Wizard and Upgrade Framework|WebLogic Server/Web 2.0 HTTP Pub-Sub Server|WebLogic Server/WebLogic JDBC Drivers|WebLogic Server/Third Party JDBC Drivers|WebLogic Server/WebLogic Server Clients|WebLogic Server/WebLogic Web Server Plugins|WebLogic Server/UDDI and Xquery Support|Oracle Coherence/Coherence Product Files"
+
+
+# ADF
+  adf_binary_src: "{{ software_mount }}/appdev/"
+  adf_silent_file_dest: "{{ fusion_user_home }}/adf_silent"
+  adf_home: "{{ middleware_home }}/oracle_common"
+  template_home: "{{ wlst_working_directory }}/domain_template"
+  adf_wld_home: "{{ fusion_user_home }}/domain"
+  adf_wld_domain_dir: "{{ fusion_user_home }}/domain/{{ adf_wld_name }}"
+  adf_wld_name: adf_domain
+  adf_template: "{{ template_home }}/{{ adf_wld_name }}_template.jar"
+  adf_base_port: 8000
+  adf_jat_base_port: 9000
+  adf_jat_mgd_svr_count: 1
+  adf_admin_name: adf_admin
+  adf_message_buffersize: 2000
+  adf_apps_dir: "{{ adf_wld_domain_dir }}/apps/adf"
+  adf_mds_db_user: PROD_MDS
+  adf_mds_db_password: wipro
+  adf_fileStore_location: "{{ adf_wld_domain_dir }}/fileStore"
+  adf_admin_mem_args: '"-Xmx6g -Xms6g -XX:MaxPermSize=1g {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }}"' #add your args here
+  adf_mgd_mem_args: '"-Xmx48g -Xms48g -XX:MaxPermSize=1g -Doracle.jdbc.autoCommitSpecCompliant=false {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }} {{ common_jvm_tuning_args }}"' #add your args here
+  # -Doracle.jdbc.autoCommitSpecCompliant=false for ojdbc7 on ADF
+
+# OSB
+  osb_binary_src: "{{ software_mount }}/osb"
+  silent_osb_file_dest: "{{ fusion_user_home }}/osb_silent"
+  osb_customisation_file: "{{ wlst_working_directory }}/osb_customization_file.xml"
+  osb_home: "{{ middleware_home }}/oracle_osb"
+  osb.adminserver.jvmargs: ''
+  osb_template_home: "{{ wlst_working_directory }}/domain_template"
+  osb_wld_name: osb_domain
+  osb_admin_port: 7001
+  osb_wld_home: "{{ fusion_user_home }}/domain"
+  osb_template: "{{ template_home }}/{{ osb_wld_name }}_template.jar"
+  osb_wld_domain_dir: "{{ osb_wld_home }}/{{ osb_wld_name }}"
+  osb_fileStore_location: ''
+  osb_message_buffersize: 20000
+  osb_base_port: 9000
+  #current script does not allow change of this name. If you change this, script will fail.
+  osb_admin_name: AdminServer
+  osb_admin_ip: "{{ hostvars[ groups['tag_Role_osb_admin'][0]].ec2_private_ip_address }}"
+  osb_mgd_mem_args: '"-Xmx5g -Xms5g -XX:MaxPermSize=1g {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }} {{ common_jvm_tuning_args }}"' #add your args here
+  osb_admin_mem_args: '"-Xmx5g -Xms5g -XX:MaxPermSize=1g {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }}"' #add your args here
+  osb_template_copy_folder: "{{ software_mount }}/templates/osb"
+
+
+# SOA generic settings
+  soa_binary_src: "{{ software_mount }}/soa"
+  soa_silent_file_dest: "{{ fusion_user_home }}/soa_install_silent.xml"
+  soa_home: "{{ fusion_software_location }}/middleware/oracle_soa"
+  soa_oracle_common: "{{ fusion_software_location }}/middleware/oracle_common"
+  soa_inventory_file: "{{ fusion_soa_base }}/oraInst.loc"
+  soa_inventory_directory: "/opt/oracle/inventory"
+  soa_response_file: "{{ fusion_soa_base }}/soa-install.rsp"
+  soa_already_installed: false
+  soa_sync_max_time: 200
+  #SOA customisation settings
+  soa_repo_schema_passwd: wipro
+  soa_repo_prefix: PRODSOA
+  soa_template_home: "{{ wlst_working_directory }}/domain_template"
+  soa_wld_name: soa_domain
+  soa_wld_home: "{{ fusion_user_home }}/domain"
+  soa_wld_domain_dir: "{{ soa_wld_home }}/{{ soa_wld_name }}"
+  soa_template: "{{ template_home }}/{{ soa_wld_name }}_template.jar"
+  soa_fileStore_location: "{{ soa_wld_home }}/{{ soa_wld_name }}/filestore"
+  soa_jmsServer_message_buffersize: 20000
+  soa_admin_name: soa_admin
+  soa_admin_mem_args: '"-Xmx6g -Xms6g -XX:MaxPermSize=1g {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }}"' #add your args here
+  soa_mgd_mem_args: '"-Xmx25g -Xms25g -XX:MaxPermSize=1g {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }}  {{ common_jvm_tuning_args }}"' #add your args here
+  soa_mgd_svr_start_args: -Dcom.amazonaws.sdk.disableCertChecking=true
+  soa_base_port: 5000
+  soa_admin_port: 7001
+  soa_admin_ip: "{{  hostvars[groups['tag_Role_soa_admin'][0]].ec2_private_ip_address }}"
+  soa_db_adapter_plan_path: /opt/oracle/middleware/oracle_soa/soa/connectors/db/
+  soa_jms_adapter_plan_path: /opt/oracle/middleware/oracle_soa/soa/connectors/jms/
+  soa_infra_plan_path: /opt/oracle/middleware/oracle_soa/soa/applications/plan
+  soa_jta_timeout: 3600
+  soa_infra_start_wait_in_minutes: 10 #minutes
+  #soa patch details
+  soa_psu_patch_id: 20900797
+  soa_xpath20_patch_id: 16763133
+  soa_bugs_23062966_23595661_patch_id: 24513318
+  soa_bugs_17294404_111170_patch_id: 17294404
+  soa_patch_download_loc: "{{ wlst_working_directory }}/soa_patch"
+  soa_opatch_command:  "{{ oracle_soa_home }}/OPatch/opatch"
+  oracle_common_opatch_command:  "{{ soa_oracle_common }}/OPatch/opatch"
+
+  soa_patch_localtion: '{{ software_mount }}/patches/soa/latest/'
+  soa_patch_location: '{{ software_mount }}/patches/soa/latest/'
+  soa_psu_patch_file: '{{ soa_patch_localtion }}/p20900797_111170_Generic.zip'
+  soa_xpath20_patch_file: '{{ soa_patch_localtion }}/xpath20_formatdatatimechange_p16763133_111178_Generic.zip'
+  soa_bugs_23062966_23595661_patch_file: '{{ soa_patch_localtion }}/TOP_UP_PATCH_FOR_11.1.1.7._BUGS_23062966_23595661.zip'
+  soa_bugs_17294404_111170_patch_file: '{{ soa_patch_localtion }}/p17294404_111170_Generic.zip'
+  
+  # soa_patch_location now defined !!
+  soa_flushChanges_on_MDSsession_TransKey_notCorrect_p16487379_111170_patch_file: '{{ soa_patch_location }}/flushChanges_on_MDSsession_TransKey_notCorrect_p16487379_111170_Generic.zip'
+  soa_flushChanges_on_MDSsession_TransKey_notCorrect_p16487379_111170_patch_id: 16487379
+
+# BPM
+  bpm_silent_file_dest: "{{ fusion_user_home }}/bpm_install_silent.xml"
+  bpm_repo_schema_passwd: wipro
+  bpm_repo_prefix: PRODBPM
+  bpm_template_home: "{{ wlst_working_directory }}/domain_template"
+  bpm_wld_name: bpm_domain
+  bpm_wld_home: "{{ fusion_user_home }}/domain"
+  bpm_wld_domain_dir: "{{ bpm_wld_home }}/{{ bpm_wld_name }}"
+  bpm_template: "{{ template_home }}/{{ bpm_wld_name }}_template.jar"
+  bpm_fileStore_location: ''
+  bpm_jmsServer_message_buffersize: 20000
+  bpm_admin_name: bpm_admin
+  bpm_admin_jvm_args: -Dserver.name={{ bpm_admin_name }} #add your args here
+  bpm_admin_mem_args: '"-Xmx6g -Xms6g -XX:MaxPermSize=1g {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }}"' #add your args here
+  bpm_mgd_mem_args: '"-Xmx25g -Xms25g -XX:MaxPermSize=1g {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }} {{ common_jvm_tuning_args }}"' #add your args here
+  bpm_mgd_svr_start_args: -Dcom.amazonaws.sdk.disableCertChecking=true
+  bpm_base_port: 4000
+  bpm_admin_port: 7001
+  bpm_admin_ip: "{{ hostvars[ groups['tag_Role_bpm_admin'][0]].ec2_private_ip_address }}"
+  bpm_db_adapter_plan_path: /opt/oracle/middleware/oracle_soa/soa/connectors/db/
+  bpm_jms_adapter_plan_path: /opt/oracle/middleware/oracle_soa/soa/connectors/jms/
+  bpm_infra_plan_path:  /opt/oracle/middleware/oracle_soa/soa/applications/plan
+  bpm_jta_timeout: 400
+  bpm_infra_start_wait_in_minutes: 10 #minutes
+  wls_mgd_svr_start_wait_in_minutes: 6 #minutes
+  bpm_template_copy_folder: "{{ software_mount }}/templates/bpm"
+
+# OHS
+  ohs_src: "{{ software_mount }}/webtier12213"
+  silent_ohs_file: "{{ fusion_user_home }}/ohs_silent.xml"
+  ohs_installer: "{{ ohs_src }}/fmw_12.2.1.3.0_ohs_linux64.bin"
+  ohs_home: "{{ middleware_home }}/oracle_common"
+  ohs_wld_home: "{{ fusion_user_home }}/domain"
+  ohs_wld_domain_dir: "{{ fusion_user_home }}/domain/{{ ohs_wld_name }}"
+  ohs_wld_name: ohs_domain
+  ohs_nm_listnadrs: "{{ hostvars[inventory_hostname].ec2_private_ip_address }}"
+  ohs_nm_type: ssl
+  ohs_nm_port: 5556
+  ohs_nm_username: weblogic
+  ohs_nm_password: weblogic11g
+  ohs_nm_home: "{{ ohs_wld_home }}/nodemanager"
+  ohs_instance_name: ohs1
+  ohs_admin_port: 9999
+  ohs_http_port: 7777
+  ohs_https_port: 4443
+
+# OID Parameters
+  oid_schema_name: ODS
+  oid_schema_password: password1
+  oid_src: "{{ software_mount }}/idm/64bit"
+  silent_oid_file: "{{ fusion_user_home }}/oid_silent.xml"
+  oid_installer: "{{ oid_src }}/Disk1/runInstaller"
+  oid_host: "{{ hostvars[ groups['tag_Role_oid'][0]].ec2_private_ip_address }}"
+  oid_port: 3060
+  oid_admin: "cn=orcladmin"
+  oid_admin_password: Elsevier01
+  oid_ldap_group_base: "cn=Groups,dc=elsevier,dc=com"
+  oid_ldap_user_base: "cn=Users,dc=elsevier,dc=com"
+
+
+# RCU Parameters
+  rcu_sysdba_passwd: knotjul124
+  rcu_oid_schema_passwd: wipro
+  rcu_oid_schema_prefix: PROD
+
+
+# Nexus credentials
+  nexus_url: http://nexus.cbsels.com:8080/nexus/content/repositories/evise-releases
+  nexus_username: deployment
+  nexus_password: BatteryHorseStaple

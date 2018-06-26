@@ -1,0 +1,92 @@
+pipeline {
+ agent { label 'master' }
+ options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    gitLabConnection('gitlab')
+ }
+
+ environment {
+        EC2_INI_PATH = './inventory/config/int/ec2.ini'
+    }
+
+ stages {
+
+   stage('Delete directory') {
+        steps {
+            sh 'rm -rf ./rap-terraformcontrol-evise ./terraform.tfstate.backup ./terraform.tfvars ./variables.tf ./int-oracle.tf ./.terraform ./.ansible'
+
+        }
+    }
+
+    stage('Stage1 - Initialise Build') {
+        steps {
+            parallel(
+				  "Initialise Ansible": {
+				      sh 'rm -rf ./.ansible'
+                      sh 'chmod +x ./inventory/ec2.py'
+                      sh '/usr/local/bin/ansible-galaxy install -r ./requirements.yml'
+				  },
+				  "Prove Connectivity": {
+					sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/initialise-build.yml'
+
+				  },
+			)
+        }
+    }
+
+    stage('Stage1 - Install adf,soa,bpm,osb, and configure DB') {
+        steps {
+            parallel(
+				  "Install db": {
+					sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/db-playbook.yml'
+				  },
+				  "Install bpm": {
+					sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/bpm-playbook.yml'
+				  },
+				  "Install osb": {
+					sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/osb-playbook.yml'
+				  },
+				   "Install soa": {
+					sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/soa-playbook.yml'
+				  },
+				   "Install adf": {
+					sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/adf-playbook.yml'
+				  },
+			)
+        }
+    }
+
+  stage('Stage2 - Configure oid') {
+      steps {
+          sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/oid-playbook.yml'
+      }
+  }
+
+  stage('Stage3 - Configure osb,bpm,soa,adf') {
+      steps {
+          parallel(
+        "build osb wld ": {
+        sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/osb-managed-playbook.yml'
+        },
+
+        "build bpm wld ": {
+        sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/bpm-managed-playbook.yml'
+        },
+
+        "build soa ": {
+        sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/soa-managed-playbook.yml'
+        },
+        "build adf ": {
+        sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/adf-managed-playbook.yml'
+        },
+        "build ohs ": {
+        sh '/usr/local/bin/ansible-playbook -e "ansible_ssh_user=ec2-user" --private-key ~/.ssh/infra-temp -i ./inventory/ec2.py ./playbooks/ohs-playbook.yml'
+        },
+
+
+    )
+      }
+  }
+
+}
+}

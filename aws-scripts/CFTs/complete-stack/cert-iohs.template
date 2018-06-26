@@ -1,0 +1,332 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create internal ohs instances & internal ELB for Certification environment. Creates network interface with dynamic IP address(via dhcp). Creates Route 53 Record sets(A & CNAME). Uses RHEL5.9 AMI. Security Groups for Instance & ELB are created through sg-evise-cert stack & evise-cert-elb-sg stack respectively. Installation Media Binary Files are attached as EBS volume using snapshot (snap-ee4a1c09), which will be deleted on instance termination. Instance Root volume won't be deleted on instance Termination. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"iohs1AMIID": {
+			"Description": "AMI ID for iohs1 Instance",
+			"Type": "String",
+			"Default": "ami-5b65a52c"
+		},
+		"iohs2AMIID": {
+			"Description": "AMI ID for iohs2 Instance",
+			"Type": "String",
+			"Default": "ami-7d65a50a"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for certification Instances",
+			"Default": "m1.large",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-iohs",
+			"Default": "sg-2000fe45",
+			"Type": "String"
+		},
+		"ELBSecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-iohs-elb",
+			"Default": "sg-4207f927",
+			"Type": "String"
+		}
+	},
+	"Resources" : {
+		"iohs1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "iohs1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-iohs1-cert"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+	    },
+		"iohs2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "iohs2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ { "Key" : "Name","Value":"evise-iohs2-cert"} ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+		},
+		"iohsELB" : {
+			"Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+			"Properties" : {
+				"SecurityGroups" : [ { "Ref" : "ELBSecurityGroupID" } ],
+				"Subnets" : [ { "Ref" : "Subnet1A" }, { "Ref" : "Subnet1B" } ],
+				"Instances" : [ { "Ref" : "iohs1" }, { "Ref" : "iohs2" } ],
+				"CrossZone" : true,
+				"Listeners" : [ { "LoadBalancerPort" : "80", "InstancePort" : "7777", "Protocol" : "HTTP" } ],
+				"Scheme" : "internal",
+				"HealthCheck" : {
+					"Target" : "TCP:7777",
+					"HealthyThreshold" : "2",
+					"UnhealthyThreshold" : "10",
+					"Interval" : "30",
+					"Timeout" : "5"
+				}
+			}
+		},
+		"iohs1DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs1 primary IP",
+				"Name" : "cert-evise-iohs1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "iohs1", "PrivateIp" ] } ]
+			}
+		},
+		"iohs1hostnameDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs1 primary IP",
+				"Name" : "evise-iohs1-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "iohs1", "PrivateIp" ] } ]
+			}
+		},
+		"iohs2DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs2 primary IP",
+				"Name" : "cert-evise-iohs2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "iohs2", "PrivateIp" ] } ]
+			}
+		},
+		"iohs2hostnameDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs2 primary IP",
+				"Name" : "evise-iohs2-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "iohs2", "PrivateIp" ] } ]
+			}
+		},
+		"ecmELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs ELB in prod env.",
+				"Name" : "cert-i-ecm.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["iohsELB","DNSName"]}
+				]
+			}
+		},
+		"iamELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs ELB in prod env.",
+				"Name" : "cert-i-iam.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["iohsELB","DNSName"]}
+				]
+			}
+		},
+		"idmELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs ELB in prod env.",
+				"Name" : "cert-i-idm.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["iohsELB","DNSName"]}
+				]
+			}
+		},
+		"oamELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs ELB in prod env.",
+				"Name" : "cert-i-oam.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["iohsELB","DNSName"]}
+				]
+			}
+		},
+		"oimELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs ELB in prod env.",
+				"Name" : "cert-i-oim.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["iohsELB","DNSName"]}
+				]
+			}
+		},
+		"soaELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs ELB in prod env.",
+				"Name" : "cert-i-soa.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["iohsELB","DNSName"]}
+				]
+			}
+		},
+		"soa2ELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs ELB in prod env.",
+				"Name" : "cert-i-soa2.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["iohsELB","DNSName"]}
+				]
+			}
+		},
+		"wcsELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal ohs ELB in prod env.",
+				"Name" : "cert-i-wcs.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["iohsELB","DNSName"]}
+				]
+			}
+		}
+	},
+	"Outputs" : {
+		"iohs1InstanceID" : {
+			"Value" : { "Ref" : "iohs1" },
+			"Description" : "Instance Id of iohs1 instance"
+		},
+		"iohs2InstanceID" : {
+			"Value" : { "Ref" : "iohs2" },
+			"Description" : "Instance Id of iohs2 instance"
+		},
+		"iohs1PrimaryIPurl" : {
+			"Description" : "DNS record of the iohs1 primary ip",
+			"Value" :  { "Ref" :  "iohs1DNSRecord" }
+		},
+		"iohs1hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the iohs1 primary ip",
+			"Value" :  { "Ref" :  "iohs1hostnameDNSRecord" }
+		},
+		"iohs2PrimaryIPurl" : {
+			"Description" : "DNS record of the iohs2 primary ip",
+			"Value" :  { "Ref" :  "iohs2DNSRecord" }
+		},
+		"iohs2hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the iohs2 primary ip",
+			"Value" :  { "Ref" :  "iohs2hostnameDNSRecord" }
+		},
+		"ecmELBurl" : {
+			"Description" : "DNS record of the iohs elb",
+			"Value" :  { "Ref" :  "ecmELBDNSRecord" }
+		},
+		"iamELBurl" : {
+			"Description" : "DNS record of the iohs elb",
+			"Value" :  { "Ref" :  "iamELBDNSRecord" }
+		},
+		"idmELBurl" : {
+			"Description" : "DNS record of the iohs elb",
+			"Value" :  { "Ref" :  "idmELBDNSRecord" }
+		},
+		"oamELBurl" : {
+			"Description" : "DNS record of the iohs elb",
+			"Value" :  { "Ref" :  "oamELBDNSRecord" }
+		},
+		"oimELBurl" : {
+			"Description" : "DNS record of the iohs elb",
+			"Value" :  { "Ref" :  "oimELBDNSRecord" }
+		},
+		"soaELBurl" : {
+			"Description" : "DNS record of the iohs elb",
+			"Value" :  { "Ref" :  "soaELBDNSRecord" }
+		},
+		"soa2ELBurl" : {
+			"Description" : "DNS record of the iohs elb",
+			"Value" :  { "Ref" :  "soa2ELBDNSRecord" }
+		},
+		"wcsELBurl" : {
+			"Description" : "DNS record of the iohs elb",
+			"Value" :  { "Ref" :  "wcsELBDNSRecord" }
+		}
+	}
+}

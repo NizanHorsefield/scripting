@@ -1,0 +1,119 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "centos/6"
+  config.vm.synced_folder "/Users/horsefieldn/work", "/vagrant", type: "virtualbox"
+
+#Control
+  config.vm.define "control" do |control|
+    control.vm.hostname = 'control'
+    control.vm.box_url = "centos/6"
+	control.vm.provision :shell, :path => "bootstrap-admin.sh"
+	control.vm.network :private_network, ip: "172.168.33.54"
+    control.vm.provider :virtualbox do |v|
+	  v.name = "control"
+      v.gui = false
+      v.memory = "1024"
+      v.cpus = 2
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.customize ["modifyvm", :id, "--name", "control"]
+    end
+  end
+
+#OHS
+  config.vm.define "ohs" do |ohs|
+    ohs.vm.hostname = 'ohs'
+    ohs.vm.box_url = "centos/6"
+	ohs.vm.provision :shell, :path => "bootstrap-ohs.sh"
+	ohs.vm.network :private_network, ip: "172.168.33.55"
+    ohs.vm.provider :virtualbox do |v|
+	  v.name = "ohs"
+      v.gui = false
+      v.memory = "1024"
+      v.cpus = 2
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.customize ["modifyvm", :id, "--name", "ohs"]
+    end
+  end
+
+#Admin
+  config.vm.define "admin" do |admin|
+    admin.vm.hostname = 'admin'
+    admin.vm.box_url = "centos/6"
+	admin.vm.provision :shell, :path => "bootstrap-admin.sh"
+	admin.vm.network :private_network, ip: "172.168.33.55"
+    admin.vm.provider :virtualbox do |v|
+	  v.name = "admin"
+      v.gui = false
+      v.memory = "1024"
+      v.cpus = 2
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.customize ["modifyvm", :id, "--name", "admin"]
+    end
+  end
+
+#Managed02
+  config.vm.define "managed01" do |managed01|
+    managed01.vm.hostname = 'managed01'
+    managed01.vm.provision :shell, :path => "bootstrap-managed.sh"
+    managed01.vm.synced_folder "/Users/horsefieldn/work", "/vagrant", type: "virtualbox"
+    managed01.vm.network :private_network, ip: "172.168.33.56"
+    managed01.vm.provider :virtualbox do |v|
+	  v.name = "managed01"
+      v.gui = false
+      v.memory = "2048"
+      v.cpus = 2
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.customize ["modifyvm", :id, "--name", "managed01"]
+    end
+  end
+
+#Managed02
+  config.vm.define "managed02" do |managed02|
+    managed02.vm.hostname = 'managed02'
+    managed02.vm.provision :shell, :path => "bootstrap-managed.sh"
+    managed02.vm.synced_folder "/Users/horsefieldn/work", "/vagrant", type: "virtualbox"
+    managed02.vm.network :private_network, ip: "172.168.33.57"
+    managed02.vm.provider :virtualbox do |v|
+	  v.name = "managed02"
+      v.gui = false
+      v.memory = "2048"
+      v.cpus = 2
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.customize ["modifyvm", :id, "--name", "managed02"]
+    end
+  end
+
+#Managed03
+  config.vm.define "managed03" do |managed03|
+    managed03.vm.hostname = 'managed03'
+    managed03.vm.provision :shell, :path => "bootstrap-managed.sh"
+    managed03.vm.synced_folder "/Users/horsefieldn/work", "/vagrant", type: "virtualbox"
+    managed03.vm.network :private_network, ip: "172.168.33.58"
+    managed03.vm.provider :virtualbox do |v|
+	  v.name = "managed03"
+      v.gui = false
+      v.memory = "2048"
+      v.cpus = 2
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.customize ["modifyvm", :id, "--name", "managed03"]
+    end
+  end
+
+#Managed04
+  config.vm.define "managed04" do |managed04|
+    managed04.vm.hostname = 'managed01'
+    managed04.vm.provision :shell, :path => "bootstrap-managed.sh"
+    managed04.vm.synced_folder "/Users/horsefieldn/work", "/vagrant", type: "virtualbox"
+    managed04.vm.network :private_network, ip: "172.168.33.59"
+    managed04.vm.provider :virtualbox do |v|
+	  v.name = "managed04"
+      v.gui = false
+      v.memory = "2048"
+      v.cpus = 2
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.customize ["modifyvm", :id, "--name", "managed04"]
+    end
+  end
+end

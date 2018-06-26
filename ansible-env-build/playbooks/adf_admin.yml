@@ -1,0 +1,5 @@
+---
+- hosts: adf_admin
+  become: true
+  roles:
+    - ansible-role-adf

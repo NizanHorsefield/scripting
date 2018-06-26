@@ -1,0 +1,16 @@
+docker build -t weblogic:10.3.6 .
+docker build -t weblogic-base-domain:10.3.6 .
+docker build -t appdev:10.3.6 .
+
+docker images
+docker images -f dangling=true
+docker rmi -f $(docker images -f dangling=true -q)
+
+docker run -i -t IMAGE_ID /bin/bash
+docker run -name NAME -p 7001:7001 -i -t IMAGE_ID /bin/bash
+
+Share a local folder
+docker run -v /Users/horsefieldn/Documents/Evise_docs/Build/wp-fusion-platform-build/src/main/wlst/wlst:/tmp/work -p 7002:7001 -u 0 -i -t 2b6eb6d67137 /bin/bash
+
+docker ps -a
+

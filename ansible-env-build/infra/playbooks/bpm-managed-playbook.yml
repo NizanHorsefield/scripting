@@ -1,0 +1,5 @@
+---
+
+- hosts: tag_Role_bpm_managed
+  roles:
+    - role: bpm-managed

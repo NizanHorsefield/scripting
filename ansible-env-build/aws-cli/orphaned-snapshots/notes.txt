@@ -1,0 +1,6 @@
+aws ec2 describe-images --owner-ids 445189663936 --query 'Images[*].[ImageId,CreationDate]' –output text | awk '{ print $2 }'
+
+aws ec2 describe-instances --output text --query 'Reservations[].Instances[?LaunchTime<=`2017-01-01`][].{id: InstanceId, type: InstanceType, launched: LaunchTime}' > amis_older_than_01012017.list
+
+
+aws ec2 describe-images --output text --filter "Name=owner,Values=445189663936" --query "Images[*].{date:CreationDate}"

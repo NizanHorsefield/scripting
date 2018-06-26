@@ -1,0 +1,5 @@
+---
+
+- name: oem-agent
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-oem-agent.git
+  scm: git

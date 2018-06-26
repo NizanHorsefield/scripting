@@ -1,0 +1,286 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create bpm instances for Certification environment. Creates network interface with multiple dynamic IP addresses(via dhcp). Creates Route 53 A Record sets. Uses RHEL6.3 AMI. Security Group for Instance is created through sg-evise-cert stack. Installation Media Binary Files are attached as EBS volume using snapshot (snap-ee4a1c09), which will be deleted on instance Termination. Instance Root volume won't be deleted on instance Termination. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"bpm1AMIID": {
+			"Description": "AMI ID for bpm1 Instance",
+			"Type": "String",
+			"Default": "ami-8964a4fe"
+		},
+		"bpm2AMIID": {
+			"Description": "AMI ID for bpm2 Instance",
+			"Type": "String",
+			"Default": "ami-8164a4f6"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for certification Instances",
+			"Default": "m2.2xlarge",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-bpm",
+			"Default": "sg-9c9e84fe",
+			"Type": "String"
+		},
+		"SecondaryIPAddressCount1a" : {
+			"Type" : "Number",
+			"Default" : "3",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		},
+		"SecondaryIPAddressCount1b" : {
+			"Type" : "Number",
+			"Default" : "2",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		}
+	},
+	"Resources" : {
+		"bpm1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "bpm1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-bpm1-cert"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0bpm1"}, "DeviceIndex" : "0" } ]
+			}
+	    },
+		"Eth0bpm1" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"bpm1-cert-nic"}],
+				"Description": "NIC for bpm1 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1a" }
+			}
+		},
+		"bpm2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "bpm2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ { "Key" : "Name","Value":"evise-bpm2-cert"} ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0bpm2"}, "DeviceIndex" : "0"  } ]
+			}
+		},
+		"Eth0bpm2" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"bpm2-cert-nic"}],
+				"Description": "NIC for bpm2 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1b" }
+			}
+		},
+		"bpm101DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for bpm1 primary IP",
+				"Name" : "cert-evise-soa1-adminserver.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0bpm1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"bpm102DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for bpm1 secondary IP",
+				"Name" : "cert-evise-soa1-soa1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0bpm1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"bpm103DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for bpm1 secondary IP",
+				"Name" : "cert-evise-soa1-osb1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "1", { "Fn::GetAtt" : ["Eth0bpm1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"bpm104DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for bpm1 secondary IP",
+				"Name" : "cert-evise-soa1-nm1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "2", { "Fn::GetAtt" : ["Eth0bpm1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"bpm105DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for bpm1 primary IP",
+				"Name" : "evise-bpm1-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0bpm1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"bpm201DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for bpm2 primary IP",
+				"Name" : "cert-evise-soa1-soa2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0bpm2", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"bpm202DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for bpm2 secondary IP",
+				"Name" : "cert-evise-soa1-osb2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0bpm2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"bpm203DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for bpm2 secondary IP",
+				"Name" : "cert-evise-soa1-nm2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "1", { "Fn::GetAtt" : ["Eth0bpm2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"bpm204DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for bpm2 primary IP",
+				"Name" : "evise-bpm2-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0bpm2", "PrimaryPrivateIpAddress"] } ]
+			}
+		}
+	},
+	"Outputs" : {
+		"bpm1InstanceID" : {
+			"Value" : { "Ref" : "bpm1" },
+			"Description" : "Instance Id of bpm1 instance"
+		},
+		"bpm2InstanceID" : {
+			"Value" : { "Ref" : "bpm2" },
+			"Description" : "Instance Id of bpm2 instance"
+		},
+		"bpm1PrimaryIPurl" : {
+			"Description" : "DNS record of the bpm1 primary ip",
+			"Value" :  { "Ref" :  "bpm101DNSRecord" }
+		},
+		"bpm1hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the bpm1 primary ip",
+			"Value" :  { "Ref" :  "bpm105DNSRecord" }
+		},
+		"bpm1SecondaryIP1url" : {
+			"Description" : "DNS record of the bpm1 secondary ip 1",
+			"Value" :  { "Ref" :  "bpm102DNSRecord" }
+		},
+		"bpm1SecondaryIP2url" : {
+			"Description" : "DNS record of the bpm1 secondary ip 2",
+			"Value" :  { "Ref" :  "bpm103DNSRecord" }
+		},
+		"bpm1SecondaryIP3url" : {
+			"Description" : "DNS record of the bpm1 secondary ip 3",
+			"Value" :  { "Ref" :  "bpm104DNSRecord" }
+		},
+		"bpm2PrimaryIPurl" : {
+			"Description" : "DNS record of the bpm2 primary ip",
+			"Value" :  { "Ref" :  "bpm201DNSRecord" }
+		},
+		"bpm2hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the bpm2 primary ip",
+			"Value" :  { "Ref" :  "bpm204DNSRecord" }
+		},
+		"bpm2SecondaryIP1url" : {
+			"Description" : "DNS record of the bpm2 secondary ip 1",
+			"Value" :  { "Ref" :  "bpm202DNSRecord" }
+		},
+		"bpm2SecondaryIP2url" : {
+			"Description" : "DNS record of the bpm2 secondary ip 2",
+			"Value" :  { "Ref" :  "bpm203DNSRecord" }
+		}
+	}
+}

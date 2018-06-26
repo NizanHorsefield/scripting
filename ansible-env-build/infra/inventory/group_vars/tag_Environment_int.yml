@@ -1,0 +1,47 @@
+osb_elb: elb-osb.int.evise-nonprod.com
+bpm_elb: elb-bpm.int.evise-nonprod.com
+soa_elb: elb-soa.int.evise-nonprod.com
+oid_elb: oid0.int.evise-nonprod.com
+
+
+adf_vhost: elb-adf.int.evise-nonprod.com
+bpm_vhost: elb-bpm.int.evise-nonprod.com
+soa_vhost: elb-soa.int.evise-nonprod.com
+osb_vhost: elb-osb.int.evise-nonprod.com
+
+soa_admin_route53_names:
+  - soa-admin0.int.evise-nonprod.com
+
+soa_managed_route53_names:
+  - soa-managed0.int.evise-nonprod.com
+
+dev_domain: .eu-west-1.compute.internal
+
+env_type: PERF
+
+wl_security_realm_micros_svc_url: http://internal-alb.int.evise-nonprod.com/profile/Authentication/
+
+efs_mount_source: fs-8a038743.efs.eu-west-1.amazonaws.com
+
+
+db_server_ip: "{{ hostvars[ groups['tag_Role_db'][0]].ec2_private_ip_address }}"
+db_server_port: 1521
+
+#oem
+target_domain_name: int.evise-nonprod.com
+
+#adf
+adf_mgd_svr_count: 1
+adf_mgd_mem_args: '"-Xmx10g -Xms10g -XX:MaxPermSize=1g -Doracle.jdbc.autoCommitSpecCompliant=false {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }}"' #add your args here
+
+#soa
+soa_mgd_svr_count: 1
+soa_mgd_mem_args: '"-Xmx10g -Xms10g -XX:MaxPermSize=1g {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }}"' #add your args here
+
+#bpm
+bpm_mgd_svr_count: 1
+bpm_mgd_mem_args: '"-Xmx10g -Xms10g -XX:MaxPermSize=1g {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }}"' #add your args here
+
+#osb
+osb_mgd_svr_count: 1
+osb_mgd_mem_args: '"-Xmx5g -Xms5g -XX:MaxPermSize=1g {{common_jvm_mem_args }} {{ common_jvm_mem_log_args }} {{common_jvm_compile_args }} {{ common_jvm_jfr_args }}"' #add your args here

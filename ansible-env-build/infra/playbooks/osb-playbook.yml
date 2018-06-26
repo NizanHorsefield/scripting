@@ -1,0 +1,10 @@
+---
+
+- hosts: tag_Role_osb_admin,tag_Role_osb_managed
+  roles:
+    - role: osb
+   
+- hosts: tag_Role_osb_admin
+  roles:
+    - role: osb-admin
+      type: "admin"

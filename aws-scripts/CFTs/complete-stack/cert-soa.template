@@ -1,0 +1,286 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create bpm instances for Certification environment. Creates network interface with multiple dynamic IP addresses(via dhcp). Creates Route 53 A Record sets. Uses RHEL6.3 AMI. Security Group for Instance is created through sg-evise-cert stack. Installation Media Binary Files are attached as EBS volume using snapshot (snap-ee4a1c09), which will be deleted on instance Termination. Instance Root volume won't be deleted on instance Termination. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"soa1AMIID": {
+			"Description": "AMI ID for soa1 Instance",
+			"Type": "String",
+			"Default": "ami-a1fc29d6"
+		},
+		"soa2AMIID": {
+			"Description": "AMI ID for soa2 Instance",
+			"Type": "String",
+			"Default": "ami-bbfc29cc"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for certification Instances",
+			"Default": "m2.2xlarge",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-soa",
+			"Default": "sg-9f9e84fd",
+			"Type": "String"
+		},
+		"SecondaryIPAddressCount1a" : {
+			"Type" : "Number",
+			"Default" : "3",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		},
+		"SecondaryIPAddressCount1b" : {
+			"Type" : "Number",
+			"Default" : "2",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		}
+	},
+	"Resources" : {
+		"soa1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "soa1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-soa1-cert"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0soa1"}, "DeviceIndex" : "0" } ]
+			}
+	    },
+		"Eth0soa1" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"soa1-cert-nic"}],
+				"Description": "NIC for soa1 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1a" }
+			}
+		},
+		"soa2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "soa2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ { "Key" : "Name","Value":"evise-soa2-cert"} ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0soa2"}, "DeviceIndex" : "0"  } ]
+			}
+		},
+		"Eth0soa2" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"soa2-cert-nic"}],
+				"Description": "NIC for soa2 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1b" }
+			}
+		},
+		"soa101DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for soa1 primary IP",
+				"Name" : "cert-evise-soa2-adminserver.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0soa1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"soa102DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for soa1 secondary IP",
+				"Name" : "cert-evise-soa2-soa1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0soa1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"soa103DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for soa1 secondary IP",
+				"Name" : "cert-evise-soa2-osb1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "1", { "Fn::GetAtt" : ["Eth0soa1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"soa104DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for soa1 secondary IP",
+				"Name" : "cert-evise-soa2-nm1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "2", { "Fn::GetAtt" : ["Eth0soa1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"soa105DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for soa1 primary IP",
+				"Name" : "evise-soa1-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0soa1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"soa201DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for soa2 primary IP",
+				"Name" : "cert-evise-soa2-soa2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0soa2", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"soa202DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for soa2 secondary IP",
+				"Name" : "cert-evise-soa2-osb2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0soa2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"soa203DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for soa2 secondary IP",
+				"Name" : "cert-evise-soa2-nm2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "1", { "Fn::GetAtt" : ["Eth0soa2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"soa204DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for soa2 primary IP",
+				"Name" : "evise-soa2-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0soa2", "PrimaryPrivateIpAddress"] } ]
+			}
+		}
+	},
+	"Outputs" : {
+		"soa1InstanceID" : {
+			"Value" : { "Ref" : "soa1" },
+			"Description" : "Instance Id of soa1 instance"
+		},
+		"soa2InstanceID" : {
+			"Value" : { "Ref" : "soa2" },
+			"Description" : "Instance Id of soa2 instance"
+		},
+		"soa1PrimaryIPurl" : {
+			"Description" : "DNS record of the soa1 primary ip",
+			"Value" :  { "Ref" :  "soa101DNSRecord" }
+		},
+		"soa1SecondaryIP1url" : {
+			"Description" : "DNS record of the soa1 secondary ip 1",
+			"Value" :  { "Ref" :  "soa102DNSRecord" }
+		},
+		"soa1SecondaryIP2url" : {
+			"Description" : "DNS record of the soa1 secondary ip 2",
+			"Value" :  { "Ref" :  "soa103DNSRecord" }
+		},
+		"soa1SecondaryIP3url" : {
+			"Description" : "DNS record of the soa1 secondary ip 3",
+			"Value" :  { "Ref" :  "soa104DNSRecord" }
+		},
+		"soa1hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the soa1 primary ip",
+			"Value" :  { "Ref" :  "soa105DNSRecord" }
+		},
+		"soa2PrimaryIPurl" : {
+			"Description" : "DNS record of the soa2 primary ip",
+			"Value" :  { "Ref" :  "soa201DNSRecord" }
+		},
+		"soa2SecondaryIP1url" : {
+			"Description" : "DNS record of the soa2 secondary ip 1",
+			"Value" :  { "Ref" :  "soa202DNSRecord" }
+		},
+		"soa2SecondaryIP2url" : {
+			"Description" : "DNS record of the soa2 secondary ip 2",
+			"Value" :  { "Ref" :  "soa203DNSRecord" }
+		},
+		"soa2hostanmePrimaryIPurl" : {
+			"Description" : "DNS record of the soa2 primary ip",
+			"Value" :  { "Ref" :  "soa204DNSRecord" }
+		}
+	}
+}

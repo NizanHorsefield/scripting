@@ -1,0 +1,18 @@
+---
+- hosts: tag_Role_db,tag_Role_oid,tag_Role_osb*,tag_Role_soa*,tag_Role_bpm*,tag_Role_*ohs_dev1,tag_Role_adf*
+  gather_facts: False
+
+  tasks:
+    - name: Wait until the ansible user can log in to the instances created.
+      command: ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/infra-temp ec2-user@{{ inventory_hostname }} exit
+      register: ssh_output
+      until: ssh_output.rc == 0
+      retries: 10  
+      delay: 10
+      become: false
+      delegate_to: localhost
+   
+   
+      
+      
+      

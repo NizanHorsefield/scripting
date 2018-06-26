@@ -1,0 +1,13 @@
+---
+
+- debug:
+    msg: "{{ weblogic_check.stat.exists }}"
+
+- debug:
+    msg: "{{ weblogic_files_already_installed.stat.exists }}"
+
+- debug:
+    msg: "{{ weblogic_check.stat.exists }}"
+
+- debug:
+    msg: "{{ install_log_lastline.stdout }}"

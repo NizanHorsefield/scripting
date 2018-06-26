@@ -1,0 +1,260 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create antivirus instances & internal ELB for Certification environment. Creates network interface with dynamic IP address(via dhcp). Creates Route 53 Record sets(A & CNAME). Uses antivirus_with_puppet AMI. Security Groups for Instance & ELB are created through sg-evise-cert stack & evise-cert-elb-sg stack respectively. Installation Media Binary Files are attached as EBS volume using snapshot (snap-ee4a1c09), which will delete on instance Termination. Instance Root volume won't be deleted on instance Termination Instance is protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"av1AMIID": {
+			"Description": "AMI ID for av1 Instance",
+			"Type": "String",
+			"Default": "ami-3d65a54a"
+		},
+		"av2AMIID": {
+			"Description": "AMI ID for av2 Instance",
+			"Type": "String",
+			"Default": "ami-6365a514"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for certification Instances",
+			"Default": "m1.large",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-antivirus",
+			"Default": "sg-2100fe44",
+			"Type": "String"
+		},
+		"ELBSecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-av-elb",
+			"Default": "sg-4c07f929",
+			"Type": "String"
+		}
+	},
+	"Resources" : {
+		"av1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "av1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-av1-cert"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+	    },
+		"av2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "av2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ { "Key" : "Name","Value":"evise-av2-cert"} ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+		},
+		"avELB" : {
+			"Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+			"Properties" : {
+				"SecurityGroups" : [ { "Ref" : "ELBSecurityGroupID" } ],
+				"Subnets" : [ { "Ref" : "Subnet1A" }, { "Ref" : "Subnet1B" } ],
+				"Instances" : [ { "Ref" : "av1" }, { "Ref" : "av2" } ],
+				"CrossZone" : true,
+				"Listeners" : [ 
+					{ "LoadBalancerPort" : "26820", "InstancePort" : "26820", "Protocol" : "HTTP" }
+				],
+				"Scheme" : "internal",
+				"HealthCheck" : {
+					"Target" : "TCP:26820",
+					"HealthyThreshold" : "2",
+					"UnhealthyThreshold" : "10",
+					"Interval" : "30",
+					"Timeout" : "5"
+				}
+			}
+		},
+		"av101DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for antivirus1 primary IP",
+				"Name" : "cert-evise-antivirus1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "av1", "PrivateIp" ] } ]
+			}
+		},
+		"av102DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for antivirus1 primary IP",
+				"Name" : "cert-evise-av1-adminserver.evise-cloud.com",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "av1", "PrivateIp" ] } ]
+			}
+		},
+		"av103DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for antivirus1 primary IP",
+				"Name" : "cert-evise-av1-nm1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "av1", "PrivateIp" ] } ]
+			}
+		},
+		"av104DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for antivirus1 primary IP",
+				"Name" : "evise-av1-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "av1", "PrivateIp" ] } ]
+			}
+		},
+		"av201DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for antivirus2 primary IP",
+				"Name" : "cert-evise-antivirus2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "av2", "PrivateIp" ] } ]
+			}
+		},
+		"av202DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for antivirus2 primary IP",
+				"Name" : "cert-evise-av2-nm2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "av2", "PrivateIp" ] } ]
+			}
+		},
+		"av203DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for antivirus2 primary IP",
+				"Name" : "evise-av2-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "av2", "PrivateIp" ] } ]
+			}
+		},
+		"avELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for antivirus ELB in prod env.",
+				"Name" : "cert-i-antivirus.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["avELB","DNSName"]}
+				]
+			}
+		}
+	},
+	"Outputs" : {
+		"av1" : {
+			"Value" : { "Ref" : "av1" },
+			"Description" : "Instance Id of av1 instance"
+		},
+		"av2" : {
+			"Value" : { "Ref" : "av2" },
+			"Description" : "Instance Id of av2 instance"
+		},
+		"av101PrimaryIPurl" : {
+			"Description" : "DNS record of the av1 primary ip",
+			"Value" :  { "Ref" :  "av101DNSRecord" }
+		},
+		"av102PrimaryIPurl" : {
+			"Description" : "DNS record of the av1 primary ip",
+			"Value" :  { "Ref" :  "av102DNSRecord" }
+		},
+		"av103PrimaryIPurl" : {
+			"Description" : "DNS record of the av1 primary ip",
+			"Value" :  { "Ref" :  "av103DNSRecord" }
+		},
+		"av104PrimaryIPurl" : {
+			"Description" : "DNS record of the av1 primary ip",
+			"Value" :  { "Ref" :  "av104DNSRecord" }
+		},
+		"av201PrimaryIPurl" : {
+			"Description" : "DNS record of the av2 primary ip",
+			"Value" :  { "Ref" :  "av201DNSRecord" }
+		},
+		"av202PrimaryIPurl" : {
+			"Description" : "DNS record of the av2 primary ip",
+			"Value" :  { "Ref" :  "av202DNSRecord" }
+		},
+		"av203PrimaryIPurl" : {
+			"Description" : "DNS record of the av2 primary ip",
+			"Value" :  { "Ref" :  "av203DNSRecord" }
+		},
+		"avELBurl" : {
+			"Description" : "DNS record of the antivirus elb",
+			"Value" :  { "Ref" :  "avELBDNSRecord" }
+		}	
+	}
+}

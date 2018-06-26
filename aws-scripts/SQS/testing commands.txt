@@ -1,0 +1,24 @@
+aws sqs receive-message --queue-url https://sqs.eu-west-1.amazonaws.com/790640479873/prod-event-queue-EVISESharedServices --attribute-names All --message-attribute-names All --max-number-of-messages 1
+
+aws sqs get-queue-attributes --queue-url https://sqs.eu-west-1.amazonaws.com/790640479873/prod-event-queue-EVISESharedServices --attribute-names MaximumMessageSize VisibilityTimeout
+
+
+{
+    "Messages": [
+        {
+            "Body": "{\"@context\":\"http://vtw.elsevier.com/metadata/context.jsonld\",\"@id\":\"http://vtw.elsevier.com/message/id/Elsevier/Router/2684b977-6eba-7f36-e053-386e9b20a5dd\",\"@type\":\"msg:Message\",\"msg:format\":\"http://vtw.elsevier.com/data/voc/Formats/MessageFormat-1\",\"msg:type\":\"http://vtw.elsevier.com/data/voc/MessageTypes/ServiceCall-1\",\"msg:from\":\"http://vtw.elsevier.com/data/voc/Contributors/Elsevier/Evise\",\"msg:to\":\"http://vtw.elsevier.com/data/voc/Contributors/Elsevier/VirusCheck\",\"msg:service\":{\"@id\":\"http://vtw.elsevier.com/message/id/Elsevier/Router/2684b977-6ebb-7f36-e053-386e9b20a5dd\",\"@type\":\"msg:ServiceCall\",\"svc:time\":\"2015-12-15T08:07:34.742Z\",\"svc:type\":\"http://vtw.elsevier.com/data/voc/ServiceCall/PerformVirusCheck\",\"svc:about\":\"dev2-s3-ucmdata-evise\",\"svc:resource\":[\"https://sit2-s3-ucmdata-evise.s3.amazonaws.com/EU_WEST_1-sit2-s3-ucmdata-evise-5f8e5b5a2adaa06d906b57018aca50bb-39679_35036_56882.pdf?response-content-disposition=attachment%3B%20filename%3D%22EU_WEST_1-sit2-s3-ucmdata-evise-5f8e5b5a2adaa06d906b57018aca50bb-39679_35036_56882.pdf%22&response-content-type=application%2Fpdf&AWSAccessKeyId=AKIAJL3FCH3VGYQAQ7XQ&Expires=1460552854&Signature=JMEKYbacVWpivvkFy5dp0fClFt8%3D\"],\"svc:params\":[{\"@context\":{\"virus\":\"http://vtw.elsevier.com/data/ns/messages/Elsevier/VirusCheckService-1/\"},\"virus:post-result-at\":\"https://sit2-s3-ucmdata-evise.s3.amazonaws.com/VIRUS_EU_WEST_1-sit2-s3-ucmdata-evise-5f8e5b5a2adaa06d906b57018aca50bb-39679_35036_56882.pdf?AWSAccessKeyId=AKIAJL3FCH3VGYQAQ7XQ&Expires=1460552854&Signature=7MzQ665odkHVgrpC1LSv7NuYgeA%3D\",\"virus:remove-file-properties\":false,\"virus:and-again-please\":null}]},\"@timestamp\":\"2015-12-15T08:07:34.742Z\"}",
+            "Attributes": {
+                "ApproximateFirstReceiveTimestamp": "1450262545731",
+                "SenderId": "AIDAILEZAQMMKOXXF6MKW",
+                "ApproximateReceiveCount": "1",
+                "SentTimestamp": "1450190052177"
+            },
+            "ReceiptHandle": "AQEBCy/33cZ+qE3ejb+FO6hWMAQ0kvLmrnqmIXKMnReDGNulH16zgDxzy/q77lhq/Lx4ccEqd26DIz0nXJCqf68VF+5+wmfrueKkQnzCCljniedqyOuI3TDeQy3p66314Q++xKDG22qvcIIWHGdw0OyKm96DYyMtA68+z0s0GYCgCrApd6Eu7bolvlqvTyocYC/pEv17Zk5V+/l+bBoQGGl+4wpvFpjsVt4tp26z5IMsIuQaSHk4GNlMdbQMTsu8MQcDushHGGoFTGa7DWwkv3tpHufe2LAOqZ/UMW9F+oy7QXib4a8LkT8/xTlFO7go3sHP7Jb1cC1wIqXKlVEd1hYDDmQq7+27rOr4HGHotEaEibOr5OsTf//52/laNiHfroF1",
+            "MD5OfBody": "60c0602d1c604a8cd0eeab35e0629e2e",
+            "MessageId": "336241a5-5490-421f-9842-f91ab449876f"
+        }
+    ]
+}
+
+
+aws sqs send-message --queue-url --region eu-west-1 https://sqs.eu-west-1.amazonaws.com/445189663936/prod-event-queue-GenerateConsolidatedPDF --message-body "test from FPU4." --delay-seconds 10 --message-attributes file://send-message.json

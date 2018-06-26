@@ -1,0 +1,283 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create ucm instances & ELB for Certification environment. Creates network interface with multiple dynamic IP addresses(via dhcp). Creates Route 53 Record sets(A & CNAME). Uses RHEL6.3 AMI. Security Groups for Instance & ELB are created through sg-evise-cert stack & evise-cert-elb-sg stack respectively. Installation Media Binary Files are attached as EBS volume using snapshot (snap-ee4a1c09), which will be deleted on instance termination. Instance Root volume won't be deleted on instance Termination. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"ucm1AMIID": {
+			"Description": "AMI ID for ucm1 Instance",
+			"Type": "String",
+			"Default": "ami-3f65a548"
+		},
+		"ucm2AMIID": {
+			"Description": "AMI ID for ucm2 Instance",
+			"Type": "String",
+			"Default": "ami-6765a510"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for certification Instances",
+			"Default": "m1.xlarge",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-ucm",
+			"Default": "sg-999e84fb",
+			"Type": "String"
+		},
+		"ELBSecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-idc-elb",
+			"Default": "sg-4007f925",
+			"Type": "String"
+		},
+		"SecondaryIPAddressCount1a" : {
+			"Type" : "Number",
+			"Default" : "1",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		},
+		"SecondaryIPAddressCount1b" : {
+			"Type" : "Number",
+			"Default" : "1",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		}
+	},
+	"Resources" : {
+		"ucm1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "ucm1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-ucm1-cert"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdk",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0ucm1"}, "DeviceIndex" : "0"  } ],
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+	    },
+		"Eth0ucm1" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"ucm1-cert-nic"}],
+				"Description": "NIC for ucm1 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1a" }
+			}
+		},
+		"ucm2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "ucm2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ { "Key" : "Name","Value":"evise-ucm2-cert"} ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdk",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0ucm2"}, "DeviceIndex" : "0"  } ],
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+		},
+		"Eth0ucm2" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"ucm2-cert-nic"}],
+				"Description": "NIC for ucm2 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1b" }
+			}
+		},
+		"idcELB" : {
+			"Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+			"Properties" : {
+				"SecurityGroups" : [ { "Ref" : "ELBSecurityGroupID" } ],
+				"Subnets" : [ { "Ref" : "Subnet1A" }, { "Ref" : "Subnet1B" } ],
+				"Instances" : [ { "Ref" : "ucm1" }, { "Ref" : "ucm2" } ],
+				"CrossZone" : true,
+				"Listeners" : [ 
+					{ "LoadBalancerPort" : "26790", "InstancePort" : "26790", "Protocol" : "TCP" }
+				],
+				"Scheme" : "internal",
+				"HealthCheck" : {
+					"Target" : "TCP:26790",
+					"HealthyThreshold" : "2",
+					"UnhealthyThreshold" : "10",
+					"Interval" : "30",
+					"Timeout" : "5"
+				}
+			}
+		},
+		"ucm101DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for ucm1 primary IP",
+				"Name" : "cert-evise-wc-ucm1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0ucm1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"ucm102DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for ucm1 secondary IP",
+				"Name" : "cert-evise-wc-nm3.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0ucm1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"ucm103DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for ucm1 primary IP",
+				"Name" : "evise-ucm1-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0ucm1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"ucm201DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for ucm2 primary IP",
+				"Name" : "cert-evise-wc-ucm2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0ucm2", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"ucm202DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for ucm2 secondary IP",
+				"Name" : "cert-evise-wc-nm4.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0ucm2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"ucm203DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for ucm2 primary IP",
+				"Name" : "evise-ucm2-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0ucm2", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"idcELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for idc ELB in prod env.",
+				"Name" : "cert-i-idc.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["idcELB","DNSName"]}
+				]
+			}
+		}
+	},
+	"Outputs" : {
+		"ucm1InstanceID" : {
+			"Value" : { "Ref" : "ucm1" },
+			"Description" : "Instance Id of ucm1 instance"
+		},
+		"ucm2InstanceID" : {
+			"Value" : { "Ref" : "ucm2" },
+			"Description" : "Instance Id of ucm2 instance"
+		},
+		"ucm1PrimaryIPurl" : {
+			"Description" : "DNS record of the ucm1 primary ip",
+			"Value" :  { "Ref" :  "ucm101DNSRecord" }
+		},
+		"ucm1SecondaryIPurl" : {
+			"Description" : "DNS record of the ucm1 secondary ip",
+			"Value" :  { "Ref" :  "ucm102DNSRecord" }
+		},
+		"ucm1hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the ucm1 primary ip",
+			"Value" :  { "Ref" :  "ucm103DNSRecord" }
+		},
+		"ucm2PrimaryIPurl" : {
+			"Description" : "DNS record of the ucm2 primary ip",
+			"Value" :  { "Ref" :  "ucm201DNSRecord" }
+		},
+		"ucm2SecondaryIPurl" : {
+			"Description" : "DNS record of the ucm2 secondary ip",
+			"Value" :  { "Ref" :  "ucm202DNSRecord" }
+		},
+		"ucm2hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the ucm2 primary ip",
+			"Value" :  { "Ref" :  "ucm203DNSRecord" }
+		},
+		"idcELBurl" : {
+			"Description" : "DNS record of the idc elb",
+			"Value" : { "Ref" :  "idcELBDNSRecord" }
+		}
+	}
+}

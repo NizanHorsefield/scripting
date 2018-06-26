@@ -1,0 +1,6 @@
+---
+
+- hosts: tag_Role_oid
+  roles:
+   - role: users
+   - role: oid

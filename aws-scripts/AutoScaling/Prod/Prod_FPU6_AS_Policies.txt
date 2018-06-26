@@ -1,0 +1,15 @@
+#Create Autoscaling Policy to scale up 
+aws autoscaling put-scaling-policy --policy-name evise-fpu6-prod-scaleout-policy --auto-scaling-group-name evise-fpu6-prod-2015-12-17-FPU6ServerGroup-1D6QJJDLCHT7G --scaling-adjustment 1 --adjustment-type ChangeInCapacity 
+
+#Pin CW Alarm to Autoscaling Policy to scale up 
+aws cloudwatch put-metric-alarm --alarm-name AddCapacityProdFPU6 --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 20 --comparison-operator GreaterThanOrEqualToThreshold --dimensions Name=QueueName,Value=prod-event-queue-SendMail --evaluation-periods 2 --alarm-actions arn:aws:autoscaling:eu-west-1:445189663936:scalingPolicy:6d1ba602-48b6-458a-ab91-98554a366d69:autoScalingGroupName/evise-fpu6-prod-2015-12-17-FPU6ServerGroup-1D6QJJDLCHT7G:policyName/evise-fpu6-prod-scaleout-policy
+
+#Create Autoscaling Policy to scale down
+aws autoscaling put-scaling-policy --policy-name evise-fpu6-prod-scalein-policy --auto-scaling-group-name evise-fpu6-prod-2015-12-17-FPU6ServerGroup-1D6QJJDLCHT7G --scaling-adjustment -1 --adjustment-type ChangeInCapacity
+
+#Pin CW Alarm to Autoscaling Policy to scale down
+aws cloudwatch put-metric-alarm --alarm-name RemoveCapacityProdFPU6 --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 0 --comparison-operator LessThanOrEqualToThreshold --dimensions Name=QueueName,Value=prod-event-queue-SendMail  --evaluation-periods 2 --alarm-actions arn:aws:autoscaling:eu-west-1:445189663936:scalingPolicy:9da5e6b5-8907-47b0-9d13-b56bfbe0d4fb:autoScalingGroupName/evise-fpu6-prod-2015-12-17-FPU6ServerGroup-1D6QJJDLCHT7G:policyName/evise-fpu6-prod-scalein-policy
+ 
+ 
+ aws cloudwatch delete-alarms --alarm-name AddCapacityProdFPU6
+ aws cloudwatch delete-alarms --alarm-name RemoveCapacityProdFPU6

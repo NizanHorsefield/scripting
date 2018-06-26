@@ -1,0 +1,35 @@
+sudo fallocate -l 5G /u01/swapfile
+sudo dd if=/dev/zero of=/u01/swapfile bs=1024 count=5120000
+sudo mkswap /u01/swapfile
+sudo chmod 0600 /u01/swapfile
+sudo swapon /u01/swapfile
+
+
+For CERT ADF
+
+
+
+sudo fallocate -l 5G /u01/swapfile
+sudo dd if=/dev/zero of=/u01/swapfile bs=1024 count=5120000
+sudo mkswap /u01/swapfile
+sudo chmod 0600 /u01/swapfile
+sudo swapon /u01/swapfile
+
+format the partition
+$ mkfs -t ext4 /dev/xvdq
+
+mount the volume
+$ mount /dev/xvdk /mnt
+
+create swapfile
+$ dd if=/dev/zero of=/mnt/swapfile bs=1024 count=69632000
+
+$ swapoff -a
+
+$ mkswap /mnt/swapfile
+
+$ chmod 0600 /mnt/swapfile
+
+$ swapon /mnt/swapfile
+ 
+

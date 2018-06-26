@@ -1,0 +1,12 @@
+---
+
+- hosts: tag_Role_soa_admin,tag_Role_soa_managed
+  roles:
+    - role: soa
+    
+  
+
+- hosts: tag_Role_soa_admin
+  roles:
+    - role: soa-admin
+      type: "admin"

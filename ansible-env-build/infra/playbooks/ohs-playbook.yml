@@ -1,0 +1,15 @@
+---
+
+- hosts: tag_Role_eohs
+  roles:
+    - role: users
+    - role: ohs
+      type: "external"
+
+
+- hosts: tag_Role_iohs
+  roles:
+    - role: users
+    - role: ohs
+      type: "internal"
+  

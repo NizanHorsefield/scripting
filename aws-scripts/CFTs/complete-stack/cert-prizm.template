@@ -1,0 +1,215 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create bpm instances for Certification environment. Creates network interface with multiple dynamic IP addresses(via dhcp). Creates Route 53 A Record sets. Uses RHEL6.3 AMI. Security Group for Instance is created through sg-evise-cert stack. Installation Media Binary Files are attached as EBS volume using snapshot (snap-ee4a1c09), which will be deleted on instance Termination. Instance Root volume won't be deleted on instance Termination. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"prizm1AMIID": {
+			"Description": "AMI ID for prizm1 Instance",
+			"Type": "String",
+			"Default": "ami-ebcf0d9c"
+		},
+		"prizm2AMIID": {
+			"Description": "AMI ID for prizm2 Instance",
+			"Type": "String",
+			"Default": "ami-ebcf0d9c"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for certification Instances",
+			"Default": "m1.large",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-prizm",
+			"Default": "sg-2f00fe4a",
+			"Type": "String"
+		},
+		"ELBSecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-prizm-elb",
+			"Default": "sg-4d07f928",
+			"Type": "String"
+		}
+	},
+	"Resources" : {
+		"prizm1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "prizm1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-prizm1-cert"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "500", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+	    },
+		"prizm2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "prizm2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ { "Key" : "Name","Value":"evise-prizm2-cert"} ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "500", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+		},
+		"prizmELB" : {
+			"Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+			"Properties" : {
+				"SecurityGroups" : [ { "Ref" : "ELBSecurityGroupID" } ],
+				"Subnets" : [ { "Ref" : "Subnet1A" }, { "Ref" : "Subnet1B" } ],
+				"Instances" : [ { "Ref" : "prizm1" }, { "Ref" : "prizm2" } ],
+				"CrossZone" : true,
+				"Listeners" : [ 
+					{ "LoadBalancerPort" : "18680", "InstancePort" : "18680", "Protocol" : "HTTP" }
+				],
+				"Scheme" : "internal",
+				"HealthCheck" : {
+					"Target" : "HTTP:18680/",
+					"HealthyThreshold" : "2",
+					"UnhealthyThreshold" : "10",
+					"Interval" : "30",
+					"Timeout" : "5"
+				}
+			}
+		},
+		"prizm101DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for accusoft prizm1 primary IP",
+				"Name" : "cert-evise-prizm1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "prizm1", "PrivateIp" ] } ]
+			}
+		},
+		"prizm102DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for accusoft prizm1 primary IP",
+				"Name" : "evise-prizm1-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "prizm1", "PrivateIp" ] } ]
+			}
+		},
+		"prizm201DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for accusoft prizm2 primary IP",
+				"Name" : "cert-evise-prizm2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "prizm2", "PrivateIp" ] } ]
+			}
+		},
+		"prizm202DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for accusoft prizm2 primary IP",
+				"Name" : "evise-prizm2-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "prizm2", "PrivateIp" ] } ]
+			}
+		},
+		"prizmELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for accusoft prizm ELB in prod env.",
+				"Name" : "cert-i-prizm-accusoft.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["prizmELB","DNSName"]}
+				]
+			}
+		}
+	},
+	"Outputs" : {
+		"prizm1InstanceID" : {
+			"Value" : { "Ref" : "prizm1" },
+			"Description" : "Instance Id of prizm1 instance"
+		},
+		"prizm2InstanceID" : {
+			"Value" : { "Ref" : "prizm2" },
+			"Description" : "Instance Id of prizm2 instance"
+		},
+		"prizm101PrimaryIPurl" : {
+			"Description" : "DNS record of the prizm1 primary ip",
+			"Value" :  { "Ref" :  "prizm101DNSRecord" }
+		},
+		"prizm102PrimaryIPurl" : {
+			"Description" : "DNS record of the prizm1 primary ip",
+			"Value" :  { "Ref" :  "prizm102DNSRecord" }
+		},
+		"prizm201PrimaryIPurl" : {
+			"Description" : "DNS record of the prizm2 primary ip",
+			"Value" :  { "Ref" :  "prizm201DNSRecord" }
+		},
+		"prizm202PrimaryIPurl" : {
+			"Description" : "DNS record of the prizm2 primary ip",
+			"Value" :  { "Ref" :  "prizm202DNSRecord" }
+		},
+		"prizmELBurl" : {
+			"Description" : "DNS record of the prizm elb",
+			"Value" :  { "Ref" :  "prizmELBDNSRecord" }
+		}	
+	}
+}

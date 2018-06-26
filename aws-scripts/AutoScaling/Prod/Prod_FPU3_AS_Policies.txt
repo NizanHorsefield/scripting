@@ -1,0 +1,17 @@
+#Create Autoscaling Policy to scale up 
+aws autoscaling put-scaling-policy --policy-name evise-fpu3-prod-scaleout-policy --auto-scaling-group-name evise-fpu3-prod-2015-12-17-FPU3ServerGroup-GXKXYTNTLTGJ --scaling-adjustment 1 --adjustment-type ChangeInCapacity 
+
+#Pin CW Alarm to Autoscaling Policy to scale up 
+aws cloudwatch put-metric-alarm --alarm-name AddCapacityProdFPU3 --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 20 --comparison-operator GreaterThanOrEqualToThreshold --dimensions Name=QueueName,Value=prod-evise-queue-GenerateConsolidatedZip --evaluation-periods 2 --alarm-actions arn:aws:autoscaling:eu-west-1:445189663936:scalingPolicy:960bb2b5-aad8-4ab5-878d-a3cd4c3d4a93:autoScalingGroupName/evise-fpu3-prod-2015-12-17-FPU3ServerGroup-GXKXYTNTLTGJ:policyName/evise-fpu3-prod-scaleout-policy
+
+
+#Create Autoscaling Policy to scale down
+aws autoscaling put-scaling-policy --policy-name evise-fpu3-prod-scalein-policy --auto-scaling-group-name evise-fpu3-prod-2015-12-17-FPU3ServerGroup-GXKXYTNTLTGJ --scaling-adjustment -1 --adjustment-type ChangeInCapacity
+
+#Pin CW Alarm to Autoscaling Policy to scale down
+aws cloudwatch put-metric-alarm --alarm-name RemoveCapacityProdFPU3 --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 0 --comparison-operator LessThanOrEqualToThreshold --dimensions Name=QueueName,Value=prod-evise-queue-GenerateConsolidatedZip  --evaluation-periods 2 --alarm-actions arn:aws:autoscaling:eu-west-1:445189663936:scalingPolicy:6f21bae5-905e-466e-a36c-384ccc4d5457:autoScalingGroupName/evise-fpu3-prod-2015-12-17-FPU3ServerGroup-GXKXYTNTLTGJ:policyName/evise-fpu3-prod-scalein-policy
+
+ 
+   
+ aws cloudwatch delete-alarms --alarm-name AddCapacityProdFPU3
+ aws cloudwatch delete-alarms --alarm-name RemoveCapacityProdFPU3

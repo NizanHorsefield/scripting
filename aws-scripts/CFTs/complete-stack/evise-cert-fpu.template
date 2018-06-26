@@ -1,0 +1,267 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Template to create fpu instances & internal ELBs for CERT environment. Creates network interface with multiple dynamic IP addresses(via dhcp). Uses RHEL5.9 AMI. Security Groups for Instance & ELB are created through sg-evise-cert stack & evise-cert-elb-sg stack respectively. Instance Root volume won't be deleted on instance Termination. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID. It also creates the EC2 IAM policy, assigns SQS queues and creates an auto-scaling policy.",
+  "Parameters": {
+    "VPC": {
+      "Type": "String",
+      "Default": "vpc-1b2eee70",
+      "Description": "VpcId of your existing Virtual Private Cloud (VPC)"
+    },
+    "DNSDomain": {
+      "Type": "String",
+      "Description": "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+      "Default": "evise-cloud.com"
+    },
+    "fpu1AMIID": {
+      "Description": "AMI ID for fpu1 Instance",
+      "Type": "String",
+      "Default": "ami-3f0faa4c"
+    },
+    "Instancetype": {
+      "Description": "Instance Type for fpu Instance",
+      "Default": "m3.large",
+      "Type": "String"
+    },
+    "KeyName": {
+      "Description": "Name of an existing KeyPair to enable SSH access to the instance",
+      "Default": "evise-developer1",
+      "Type": "String"
+    },
+    "Subnet1A": {
+      "Description": "eu-west-1a instance subnet",
+      "Default": "subnet-6330f008",
+      "Type": "String"
+    },
+    "SecurityGroupID": {
+      "Description": "Security Group ID for security group sg-evise-cert-fpu",
+      "Default": "sg-9b9e84f9",
+      "Type": "String"
+    },
+    "SecondaryIPAddressCount1a": {
+      "Type": "Number",
+      "Default": "1",
+      "MinValue": "1",
+      "MaxValue": "10",
+      "Description": "Number of secondary IP addresses to assign to the network interface (1-10)",
+      "ConstraintDescription": "must be a number from 1 to 10."
+    }
+  },
+  "Resources": {
+    "FPURole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+
+        ],
+        "Path": "/",
+        "Policies": [
+
+        ]
+      }
+    },
+    "RolePolicies": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "cert-fpu-evise-role",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "Stmt1444311278002",
+              "Effect": "Allow",
+              "Action": [
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes",
+                "sqs:ReceiveMessage",
+                "sqs:SetQueueAttributes"
+              ],
+              "Resource": [
+                "arn:aws:sqs:eu-west-1:790640479873:cert-contributor-event-queue-EVISE",
+                "arn:aws:sqs:eu-west-1:790640479873:cert-event-queue-EVISESharedServices",
+                "arn:aws:sqs:eu-west-1:445189663936:cert-eviseConsolidatePDFQ",
+                "arn:aws:sqs:eu-west-1:445189663936:cert-eviseConsolidatePDFRetryQ",
+                "arn:aws:sqs:eu-west-1:445189663936:cert-fpuDeadLetterQueue",
+                "arn:aws:sqs:eu-west-1:445189663936:cert-event-queue-GenerateConsolidatedZip",
+                "arn:aws:sqs:eu-west-1:445189663936:cert-event-queue-GenerateConsolidatedZipDLQ",
+                "arn:aws:sqs:eu-west-1:445189663936:cert-event-queue-GenerateConsolidatedZipRetry"
+              ]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "FPURole"
+          }
+        ]
+      }
+    },
+    "FPUInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "FPURole"
+          }
+        ]
+      }
+    },
+    "FPUServerGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "MinSize": "1",
+        "MaxSize": "4",
+        "DesiredCapacity": "1",
+        "LaunchConfigurationName": {
+          "Ref": "FPULaunchConfig"
+        },
+        "VPCZoneIdentifier": [
+          {
+            "Ref": "Subnet1A"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "evise-fpu1-cert",
+            "PropagateAtLaunch": "true"
+          },
+          {
+            "Key": "Environment",
+            "Value": "cert",
+            "PropagateAtLaunch": "true"
+          }
+        ]
+      }
+    },
+    "FPULaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "IamInstanceProfile": {
+          "Ref": "FPUInstanceProfile"
+        },
+        "ImageId": {
+          "Ref": "fpu1AMIID"
+        },
+        "InstanceType": {
+          "Ref": "Instancetype"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "SecurityGroupID"
+          }
+        ],
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/sda1",
+            "Ebs": {
+              "VolumeSize": "120",
+              "DeleteOnTermination": "false"
+            }
+          }
+        ]
+      }
+    },
+    "eviseConPDFRetryQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "cert-eviseConsolidatePDFRetryQ",
+        "VisibilityTimeout": 60,
+        "DelaySeconds": 30,
+        "RedrivePolicy": {
+          "deadLetterTargetArn": {
+            "Fn::GetAtt": [
+              "deadLetterQueue",
+              "Arn"
+            ]
+          },
+          "maxReceiveCount": 2
+        }
+      }
+    },
+    "eviseConPDFQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "cert-eviseConsolidatePDFQ",
+        "VisibilityTimeout": 30,
+        "DelaySeconds": 3,
+        "RedrivePolicy": {
+          "deadLetterTargetArn": {
+            "Fn::GetAtt": [
+              "eviseConPDFRetryQueue",
+              "Arn"
+            ]
+          },
+          "maxReceiveCount": 5
+        }
+      }
+    },
+    "eviseCreateZipQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "cert-eviseCreateZipQ",
+        "VisibilityTimeout": 90,
+        "RedrivePolicy": {
+          "deadLetterTargetArn": {
+            "Fn::GetAtt": [
+              "deadLetterQueue",
+              "Arn"
+            ]
+          },
+          "maxReceiveCount": 1
+        }
+      }
+    },
+    "deadLetterQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "cert-fpuDeadLetterQueue"
+      }
+    }
+  },
+  "Outputs": {
+    "eviseConPDFRetryQueueURL": {
+      "Description": "URL of the source queue",
+      "Value": {
+        "Ref": "eviseConPDFRetryQueue"
+      }
+    },
+    "eviseConPDFQueueURL": {
+      "Description": "URL of the source queue",
+      "Value": {
+        "Ref": "eviseConPDFQueue"
+      }
+    },
+    "eviseCreateZipQueueURL": {
+      "Description": "URL of the source queue",
+      "Value": {
+        "Ref": "eviseCreateZipQueue"
+      }
+    },
+    "deadLetterQueueURL": {
+      "Description": "URL of the source queue",
+      "Value": {
+        "Ref": "deadLetterQueue"
+      }
+    }
+  }
+}

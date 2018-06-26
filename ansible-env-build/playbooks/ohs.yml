@@ -1,0 +1,5 @@
+---
+- hosts: ohs_external
+  become: true
+  roles:
+    - ansible-role-ohs # pass in tag to identify internal or external 

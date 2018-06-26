@@ -1,0 +1,147 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create hanfs instances for CERT environment. Creates network interface with dynamic IP address(via dhcp). Creates Route 53 A Record set. Uses RHEL6.3 AMI. Security Group for Instance is created through sg-evise-cert stack. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, IP Addresses & Route 53 Record set name.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"hanfs1AMIID": {
+			"Description": "AMI ID for hanfs1 Instance",
+			"Type": "String",
+			"Default": "ami-75190b01"
+		},
+		"hanfs2AMIID": {
+			"Description": "AMI ID for hanfs2 Instance",
+			"Type": "String",
+			"Default": "ami-75190b01"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for hanfs Instances",
+			"Default": "m1.large",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"eviseDevOpsAdmin",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "cert eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "cert eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-hanfs",
+			"Default": "sg-bd56afd8",
+			"Type": "String"
+		},
+		"hanfsShareDriveRecordSetName" :  {
+			"Description": "Route53 Record set name for hanfs instance",
+			"Default": "cert-hanfs.evise-cloud.com.",
+			"Type": "String"
+		}
+	},
+	"Resources" : {
+		"hanfs1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "hanfs1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-hanfs1-cert"} ],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+	    },
+		"hanfs2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "hanfs2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ { "Key" : "Name","Value":"evise-hanfs2-cert"} ],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+		},
+		"hanfs1DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for hanfs1 primary IP",
+				"Name" : "cert-evise-hanfs1.evise-cloud.com",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "hanfs1", "PrivateIp" ] } ]
+			}
+		},
+		"hanfs2DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for hanfs1 primary IP",
+				"Name" : "cert-evise-hanfs2.evise-cloud.com",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "hanfs2", "PrivateIp" ] } ]
+			}
+		},
+		"hanfsShareDriveDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for hanfs1 primary IP",
+				"Name" : { "Ref" : "hanfsShareDriveRecordSetName" },
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "hanfs1", "PrivateIp" ] } ]
+			}
+		}
+	},
+	"Outputs" : {
+		"hanfs1" : {
+			"Value" : { "Ref" : "hanfs1" },
+			"Description" : "Instance Id of hanfs1 instance"
+		},
+		"hanfs2" : {
+			"Value" : { "Ref" : "hanfs2" },
+			"Description" : "Instance Id of hanfs2 instance"
+		},
+		"hanfs1IP" : {
+			"Value" : { "Fn::GetAtt" : [ "hanfs1", "PrivateIp" ] },
+			"Description" : "Primary IP address of hanfs1 instance"
+		},
+		"hanfs2IP" : {
+			"Value" :  { "Fn::GetAtt" : [ "hanfs2", "PrivateIp" ] },
+			"Description" : "Primary IP address of hanfs2 instance"
+		},
+		"hanfs1PrimaryIPurl" : {
+			"Description" : "DNS record of the hanfs1 primary ip",
+			"Value" :  { "Ref" :  "hanfs1DNSRecord" }
+		},
+		"hanfs2PrimaryIPurl" : {
+			"Description" : "DNS record of the hanfs1 primary ip",
+			"Value" :  { "Ref" :  "hanfs2DNSRecord" }
+		},
+		"hanfsShareDrivePrimaryIPurl" : {
+			"Description" : "DNS record of the hanfs1 primary ip",
+			"Value" :  { "Ref" :  "hanfsShareDriveDNSRecord" }
+		}
+	}
+}

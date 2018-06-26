@@ -1,0 +1,29 @@
+---
+
+- hosts: tag_Role_adf_admin
+
+
+  tasks:
+   - name: Stop OEM Agent
+     shell: "/home/oracle/emagent/agent13c/agent_13.2.0.0.0/bin/emctl stop agent"
+     become: yes
+     become_user: oracle
+     ignore_errors: true
+
+   - name: deinstall agent 
+     shell: "/home/oracle/emagent/agent13c/agent_13.2.0.0.0/perl/bin/perl /home/oracle/emagent/agent13c/agent_13.2.0.0.0/sysman/install/AgentDeinstall.pl -agentHome /home/oracle/emagent/agent13c/agent_13.2.0.0.0/"
+     become: yes
+     become_user: oracle
+     ignore_errors: true
+
+   - name: Remove emagent dir
+     shell: "rm -rf /home/oracle/emagent"
+     become: yes
+     become_user: oracle
+     ignore_errors: true
+
+   - name: Remove .emcli.installations file  
+     shell: "rm  /home/oracle/.emcli.installations"
+     become: yes
+     become_user: oracle
+     ignore_errors: true

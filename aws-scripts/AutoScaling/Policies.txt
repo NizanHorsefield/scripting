@@ -1,0 +1,12 @@
+#Create Autoscaling Policy to scale up 
+aws autoscaling put-scaling-policy --policy-name evise-fpu-cert-scaleout-policy --auto-scaling-group-name evise-fpu-cert-2015-11-23-FPUServerGroup-1VRZJRBIM7CN5 --scaling-adjustment 1 --adjustment-type ChangeInCapacity 
+
+#Pin CW Alarm to Autoscaling Policy to scale up 
+aws cloudwatch put-metric-alarm --alarm-name AddCapacityToCertZipQueue --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 75 --comparison-operator GreaterThanOrEqualToThreshold --dimensions Name=QueueName,Value=cert-eviseCreateZipQ --evaluation-periods 2 --alarm-actions arn:aws:autoscaling:eu-west-1:445189663936:scalingPolicy:e63d1e5a-7b18-482b-b06a-0ebc1f3253cc:autoScalingGroupName/evise-fpu-cert-2015-11-23-FPUServerGroup-1VRZJRBIM7CN5:policyName/evise-fpu-cert-scaleout-policy
+
+#Create Autoscaling Policy to scale down
+aws autoscaling put-scaling-policy --policy-name evise-fpu-cert-scalein-policy --auto-scaling-group-name evise-fpu-cert-2015-11-23-FPUServerGroup-1VRZJRBIM7CN5 --scaling-adjustment -1 --adjustment-type ChangeInCapacity
+
+#Pin CW Alarm to Autoscaling Policy to scale down
+aws cloudwatch put-metric-alarm --alarm-name RemoveCapacityFromCertZipQueue --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 0 --comparison-operator LessThanOrEqualToThreshold --dimensions Name=QueueName,Value=cert-eviseCreateZipQ  --evaluation-periods 2 --alarm-actions arn:aws:autoscaling:eu-west-1:445189663936:scalingPolicy:d33946d4-0897-4c6d-aaad-b45c1e163a8f:autoScalingGroupName/evise-fpu-cert-2015-11-23-FPUServerGroup-1VRZJRBIM7CN5:policyName/evise-fpu-cert-scalein-policy
+ 

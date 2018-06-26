@@ -1,0 +1,35 @@
+pipeline {
+ agent any
+ options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    gitLabConnection('gitlab')
+ }
+ stages {
+ 
+    stage('Delete directory') {
+        steps {
+            sh 'rm -rf ./rap-terraformcontrol-evise ./terraform.tfstate.backup ./terraform.tfvars ./variables.tf ./dev1-oracle.tf ./.terraform ./.ansible'
+            
+        }
+    }
+    
+    stage('Clone TIO repo') {
+        steps {
+            sh 'git clone git@gitlab.et-scm.com:tio-rap-london/rap-terraformcontrol-evise.git'
+        }
+    }
+    stage('Initialise Terraform') {
+        steps {
+            sh '. ~/.aws.sh 2>/dev/null'
+            sh 'terraform init ./rap-terraformcontrol-evise/885289476053/dev1-perf/oracle/'
+        }
+    }
+    stage('Destroy compute') {
+        steps {
+            sh '. ~/.aws.sh 2>/dev/null'
+            sh 'terraform destroy -force  -var-file=./rap-terraformcontrol-evise/885289476053/dev1-perf/oracle/terraform.tfvars ./rap-terraformcontrol-evise/885289476053/dev1-perf/oracle/'
+        }
+    }
+    
+ }
+}

@@ -1,0 +1,77 @@
+{
+   "AWSTemplateFormatVersion" : "2010-09-09",
+   "Resources" : {
+		"db" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-db.template"
+			}
+		},
+		"soa" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-soa.template"
+			}
+		},
+		"bpm" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-bpm.template"	
+			}
+		},
+		"eohs" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-eohs.template"	
+			}
+		},
+		"iohs" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-iohs.template"
+			}
+		},
+		"oam" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-oam.template"
+			}
+		},
+		"oid" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-oid.template"
+			}
+		},
+		"adf" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-adf.template"
+			}
+		},
+		"ucm" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-ucm.template"
+			}
+		},
+		"acuusoftPrizm" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-prizm.template"
+			}
+		},
+		"antivirus" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-antivirus.template"
+			}
+		},
+		"inera" : {
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+				"TemplateURL" : "https://s3-eu-west-1.amazonaws.com/evise-cloud-formation-template/cert/cert-inera.template"
+			}
+		}
+	}
+}

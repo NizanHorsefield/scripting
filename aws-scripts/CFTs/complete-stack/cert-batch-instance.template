@@ -1,0 +1,168 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create BATCH instances & internal ELBs for CERT environment. Creates network interface with multiple dynamic IP addresses(via dhcp). Creates Route 53 Record sets(A & CNAME). Uses RHEL5.9 AMI. Security Groups for Instance & ELB are created through sg-evise-cert stack & evise-cert-elb-sg stack respectively.Instance Root volume won't be deleted on instance Termination. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"batch1AMIID": {
+			"Description": "AMI ID for fpu5 Instance",
+			"Type": "String",
+			"Default": "ami-3a77ad49"
+		},
+		"batch2AMIID": {
+			"Description": "AMI ID for fpu6 Instance",
+			"Type": "String",
+			"Default": "ami-3a77ad49"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for fpu Instance",
+			"Default": "m3.large",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-fpu",
+			"Default": "sg-9f9e84fd",
+			"Type": "String"
+		},
+		"SecondaryIPAddressCount1a" : {
+			"Type" : "Number",
+			"Default" : "1",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		},
+		"SecondaryIPAddressCount1b" : {
+			"Type" : "Number",
+			"Default" : "1",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		}
+	},
+	"Resources" : {
+		"batch1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "batch1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "false",
+				"Tags": [ {"Key" : "Name","Value":"evise-batch1-cert"}, {"Key" : "Environment","Value":"CERT"} ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					}
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0batch1"}, "DeviceIndex" : "0" } ]
+			}
+	    },
+		"Eth0batch1" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"batch1-cert-nic"}],
+				"Description": "NIC for cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1a" }
+			}
+		},
+		"batch2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "batch2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "false",
+				"Tags": [ { "Key" : "Name","Value":"evise-batch2-cert"}, {"Key" : "Environment","Value":"CERT"}  ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					}
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0batch2"}, "DeviceIndex" : "0"  } ]
+			}
+		},
+		"Eth0batch2" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"batch2-cert-nic"}],
+				"Description": "NIC for batch2 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1b" }
+			}
+		},
+		"batch1DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for batch1 primary IP in cert env.",
+				"Name" : "cert-evise-batch1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0batch1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"batch2DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for batch2 primary IP in cert env",
+				"Name" : "cert-evise-batch2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0batch2", "PrimaryPrivateIpAddress"] } ]
+			}
+		}
+	},
+	
+	"Outputs" : {
+		"batch1InstanceID" : {
+			"Value" : { "Ref" : "batch1" },
+			"Description" : "Instance Id of batch1 instance"
+		},
+		"batch2InstanceID" : {
+			"Value" : { "Ref" : "batch2" },
+			"Description" : "Instance Id of batch2 instance"
+		},
+		"batch1PrimaryIPurl" : {
+			"Description" : "DNS record of the batch1 primary ip",
+			"Value" :  { "Ref" :  "batch1DNSRecord" }
+		},
+		"batch2PrimaryIPurl" : {
+			"Description" : "DNS record of the batch2 primary ip",
+			"Value" :  { "Ref" :  "batch2DNSRecord" }
+		}
+	}
+}

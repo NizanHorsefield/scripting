@@ -1,0 +1,127 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Template to create VPC security groups for ELK ELB in Certification environment",
+  "Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of Evise Virtual Private Cloud (VPC)"
+		}		
+	},
+	"Resources": {
+		"elk": {
+				"Type": "AWS::EC2::SecurityGroup",
+				"Properties": {
+					"VpcId" : {"Ref" : "VPC"},
+					"Tags" :  [ {"Key" : "Name","Value" : "sg-evise-cert-elk"},{"Key": "Environment","Value": "CERT"}],
+					"GroupDescription": "security group for cert elk instance",
+					"SecurityGroupIngress": [
+						{ "IpProtocol" : "tcp", "CidrIp": "10.178.237.0/24", "FromPort": "0", "ToPort": "65535" },
+						{ "IpProtocol" : "udp", "CidrIp": "10.178.237.0/24", "FromPort": "0", "ToPort": "65535" },
+						{ "IpProtocol" : "icmp", "CidrIp": "10.178.237.0/24", "FromPort" : "-1", "ToPort" : "-1" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "138.12.0.0/16", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "145.36.0.0/16", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "172.16.0.0/12", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "192.168.0.0/16", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "193.131.192.0/24", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "198.187.133.0/24", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.0/26", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.64/26", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.192/27", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.224/27", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "207.24.43.0/24", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "207.25.181.0/24", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.178.232.160/27", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.178.232.160/27", "FromPort": "26808", "ToPort": "26808" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.178.232.32/27", "FromPort": "8140", "ToPort": "8140" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.178.234.43/32", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.178.234.43/32", "FromPort": "26808", "ToPort": "26808" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.178.234.43/32", "FromPort": "26810", "ToPort": "26810" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.178.234.43/32", "FromPort": "26820", "ToPort": "26820" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "1159", "ToPort": "1159" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "1521", "ToPort": "1521" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "3872", "ToPort": "3872" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "4889", "ToPort": "4889" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "4900", "ToPort": "4900" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "21112", "ToPort": "21112" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "138.12.0.0/16", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "145.36.0.0/16", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "172.16.0.0/12", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "192.168.0.0/16", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "193.131.192.0/24", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "198.187.133.0/24", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.0/26", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.64/26", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.192/27", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.224/27", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "207.24.43.0/24", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "207.25.181.0/24", "FromPort": "5601", "ToPort": "5601" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "0", "ToPort": "65535" },
+						{ "IpProtocol" : "tcp", "CidrIp": "145.36.210.177/32", "FromPort": "0", "ToPort": "65535" }
+					],
+					"SecurityGroupEgress" : [
+						{ "IpProtocol" : "tcp", "CidrIp": "10.178.237.0/24", "FromPort": "0", "ToPort": "65535" },
+						{ "IpProtocol" : "udp", "CidrIp": "10.178.237.0/24", "FromPort": "0", "ToPort": "65535" },
+						{ "IpProtocol" : "icmp", "CidrIp": "10.178.237.0/24", "FromPort" : "-1", "ToPort" : "-1" },
+						{ "IpProtocol" : "tcp", "CidrIp": "145.36.210.177/32", "FromPort": "21", "ToPort": "21" },
+						{ "IpProtocol" : "tcp", "CidrIp": "0.0.0.0/0", "FromPort": "25", "ToPort": "25" },
+						{ "IpProtocol" : "tcp", "CidrIp": "0.0.0.0/0", "FromPort": "80", "ToPort": "80" },
+						{ "IpProtocol" : "udp", "CidrIp": "0.0.0.0/0", "FromPort": "123", "ToPort": "123" },
+						{ "IpProtocol" : "tcp", "CidrIp": "0.0.0.0/0", "FromPort": "443", "ToPort": "443" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.178.232.32/27", "FromPort": "8140", "ToPort": "8140" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "22", "ToPort": "22" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "1159", "ToPort": "1159" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "1521", "ToPort": "1521" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "3872", "ToPort": "3872" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "4889", "ToPort": "4889" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "4900", "ToPort": "4900" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "21112", "ToPort": "21112" },
+						{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "0", "ToPort": "65535" }
+					]
+				}
+			},
+		"elkPublicELBSG": {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"GroupDescription" : "ELK ELB Security Group in Cert env.",
+				"Tags" :  [ {"Key" : "Name","Value" : "sg-evise-cert-elk-elb"},{"Key": "Environment","Value": "CERT"}],
+				"VpcId" : { "Ref" : "VPC" },
+				"SecurityGroupIngress" : [ 
+					{ "IpProtocol" : "tcp", "FromPort" : "0", "ToPort" : "65535", "CidrIp" : "10.178.237.0/24" },
+					{ "IpProtocol" : "tcp", "FromPort" : "0", "ToPort" : "65535", "CidrIp" : "10.178.232.160/27" },
+					{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "138.12.0.0/16", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "145.36.0.0/16", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "172.16.0.0/12", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "192.168.0.0/16", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "193.131.192.0/24", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "198.187.133.0/24", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.0/26", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.64/26", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.192/27", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.224/27", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "207.24.43.0/24", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "207.25.181.0/24", "FromPort": "80", "ToPort": "80" },
+					{ "IpProtocol" : "tcp", "CidrIp": "10.0.0.0/8", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "138.12.0.0/16", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "145.36.0.0/16", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "172.16.0.0/12", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "192.168.0.0/16", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "193.131.192.0/24", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "198.187.133.0/24", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.0/26", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.64/26", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.192/27", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "198.206.141.224/27", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "207.24.43.0/24", "FromPort": "443", "ToPort": "443" },
+					{ "IpProtocol" : "tcp", "CidrIp": "207.25.181.0/24", "FromPort": "443", "ToPort": "443" }
+				],
+				"SecurityGroupEgress" : [ 
+					{ "IpProtocol" : "tcp", "FromPort" : "0", "ToPort" : "65535", "CidrIp" : "0.0.0.0/0" }
+				]
+			}
+		}
+	}
+}

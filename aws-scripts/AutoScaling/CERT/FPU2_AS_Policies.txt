@@ -1,0 +1,12 @@
+#Create Autoscaling Policy to scale up 
+aws autoscaling put-scaling-policy --policy-name evise-fpu2-cert-scaleout-policy --auto-scaling-group-name evise-fpu2-cert-2015-12-10-FPU2ServerGroup-1RXE21P83EXSA --scaling-adjustment 1 --adjustment-type ChangeInCapacity 
+
+#Pin CW Alarm to Autoscaling Policy to scale up 
+aws cloudwatch put-metric-alarm --alarm-name AddCapacityFPU2 --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 100 --comparison-operator GreaterThanOrEqualToThreshold --dimensions Name=QueueName,Value=cert-event-queue-GenerateConsolidatedPDF --evaluation-periods 2 --alarm-actions arn:aws:autoscaling:eu-west-1:445189663936:scalingPolicy:23ae6336-3643-4ef2-995d-94d45d442c2b:autoScalingGroupName/evise-fpu2-cert-2015-12-10-FPU2ServerGroup-1RXE21P83EXSA:policyName/evise-fpu2-cert-scaleout-policy
+
+#Create Autoscaling Policy to scale down
+aws autoscaling put-scaling-policy --policy-name evise-fpu2-cert-scalein-policy --auto-scaling-group-name evise-fpu2-cert-2015-12-10-FPU2ServerGroup-1RXE21P83EXSA --scaling-adjustment -1 --adjustment-type ChangeInCapacity
+
+#Pin CW Alarm to Autoscaling Policy to scale down
+aws cloudwatch put-metric-alarm --alarm-name RemoveCapacityFPU2 --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 0 --comparison-operator LessThanOrEqualToThreshold --dimensions Name=QueueName,Value=cert-event-queue-GenerateConsolidatedPDF  --evaluation-periods 2 --alarm-actions arn:aws:autoscaling:eu-west-1:445189663936:scalingPolicy:badbfd9a-9946-4d67-8b9b-50816e65c1dc:autoScalingGroupName/evise-fpu2-cert-2015-12-10-FPU2ServerGroup-1RXE21P83EXSA:policyName/evise-fpu2-cert-scalein-policy
+ 

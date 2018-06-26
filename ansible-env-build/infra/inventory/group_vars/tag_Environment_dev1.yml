@@ -1,0 +1,37 @@
+osb_elb: elb-osb.dev1.evise-nonprod.com
+bpm_elb: elb-bpm.dev1.evise-nonprod.com
+soa_elb: elb-soa.dev1.evise-nonprod.com
+oid_elb: oid0.dev1.evise-nonprod.com
+
+
+adf_vhost: elb-adf.dev1.evise-nonprod.com
+bpm_vhost: elb-bpm.dev1.evise-nonprod.com
+soa_vhost: elb-soa.dev1.evise-nonprod.com
+osb_vhost: elb-osb.dev1.evise-nonprod.com
+
+dev_domain: .eu-west-1.compute.internal
+
+env_type: PERF
+
+wl_security_realm_micros_svc_url: http://internal-alb.dev1.evise-nonprod.com/profile/Authentication/
+
+efs_mount_source: fs-5b5f8592.efs.eu-west-1.amazonaws.com
+
+
+db_server_ip: "{{ hostvars[ groups['tag_Role_db'][0]].ec2_private_ip_address }}"
+db_server_port: 1521
+
+#oem
+target_domain_name: dev1.evise-nonprod.com
+
+#adf
+adf_mgd_svr_count: 18
+
+#soa
+soa_mgd_svr_count: 2
+
+#bpm
+bpm_mgd_svr_count: 4
+
+#osb
+osb_mgd_svr_count: 2

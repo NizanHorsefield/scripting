@@ -1,0 +1,16 @@
+#Create Autoscaling Policy to scale up 
+aws autoscaling put-scaling-policy --policy-name evise-fpu4-prod-scaleout-policy --auto-scaling-group-name evise-fpu4-prod-2015-12-15-FPU4ServerGroup-56EZNZ1MNX10 --scaling-adjustment 1 --adjustment-type ChangeInCapacity 
+
+#Pin CW Alarm to Autoscaling Policy to scale up 
+aws cloudwatch put-metric-alarm --alarm-name AddCapacityProdFPU4 --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 20 --comparison-operator GreaterThanOrEqualToThreshold --dimensions Name=QueueName,Value=prod-event-queue-GenerateConsolidatedPDF --evaluation-periods 2 --alarm-actions arn
+
+#Create Autoscaling Policy to scale down
+aws autoscaling put-scaling-policy --policy-name evise-fpu4-prod-scalein-policy --auto-scaling-group-name evise-fpu4-prod-2015-12-15-FPU4ServerGroup-56EZNZ1MNX10 --scaling-adjustment -1 --adjustment-type ChangeInCapacity
+
+#Pin CW Alarm to Autoscaling Policy to scale down
+aws cloudwatch put-metric-alarm --alarm-name RemoveCapacityProdFPU4 --metric-name ApproximateNumberOfMessagesVisible --namespace "AWS/SQS" --statistic Average --period 300 --threshold 0 --comparison-operator LessThanOrEqualToThreshold --dimensions Name=QueueName,Value=prod-event-queue-GenerateConsolidatedPDF  --evaluation-periods 2 --alarm-actions arn
+ 
+ 
+  
+ aws cloudwatch delete-alarms --alarm-name AddCapacityProdFPU4
+ aws cloudwatch delete-alarms --alarm-name RemoveCapacityProdFPU4

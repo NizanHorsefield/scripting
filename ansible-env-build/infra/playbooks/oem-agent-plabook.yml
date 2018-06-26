@@ -1,0 +1,7 @@
+---
+
+- hosts: tag_Role_db,tag_Role_oid,tag_Role_osb*,tag_Role_soa*,tag_Role_bpm*,tag_Role_adf*
+  roles:
+    - role: oem-agent
+    - role: oem-config
+    

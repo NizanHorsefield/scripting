@@ -1,0 +1,317 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create ELK instances & internal ELB for Certification environment. Creates network interface with dynamic IP address(via dhcp). Creates Route 53 Record sets(A & CNAME). Uses Dev ELK instance ami-820baff1 as th3e base image. Security Groups for Instance & ELB are created through sg-evise-cert stack & evise-cert-elb-sg stack respectively. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names. Creates the SQS queue and EC2 IAM Role that references the Q.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"elk1AMIID": {
+			"Description": "AMI ID for elk1 Instance",
+			"Type": "String",
+			"Default": "ami-820baff1"
+		},
+		"elk2AMIID": {
+			"Description": "AMI ID for elk2 Instance",
+			"Type": "String",
+			"Default": "ami-820baff1"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for certification Instances",
+			"Default": "m3.large",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-soa",
+			"Default": "sg-95c95ef1",
+			"Type": "String"
+		},
+		"ELBSecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-elk-elb",
+			"Default": "sg-8bc95eef",
+			"Type": "String"
+		}
+	},
+	"Resources" : {
+		"eviseCertLogstashQ1": {
+		  "Type": "AWS::SQS::Queue",
+		  "Properties": {
+			"QueueName": "cert-logstash-access-queue",
+			"VisibilityTimeout": 60,
+			"DelaySeconds": 30
+			}
+		  },
+		"eviseCertLogstashQ2": {
+		  "Type": "AWS::SQS::Queue",
+		  "Properties": {
+			"QueueName": "cert-logstash-weblogic-queue",
+			"VisibilityTimeout": 60,
+			"DelaySeconds": 30
+			}
+		  },
+	 "ELKRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+
+        ],
+        "Path": "/",
+        "Policies": [
+
+        ]
+      }
+    },
+    "RolePolicies": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "cert-elk-evise-role",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "Stmt1444311278002",
+              "Effect": "Allow",
+              "Action": [
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes",
+                "sqs:ReceiveMessage",
+                "sqs:SetQueueAttributes"
+              ],
+              "Resource": {"Fn::GetAtt": ["eviseCertLogstashQ1","Arn"]}
+			  }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "ELKRole"
+          }
+        ]
+      }
+    },
+    "ELKInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "ELKRole"
+          }
+        ]
+      }
+    },
+		"elk1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"IamInstanceProfile": {"Ref": "ELKInstanceProfile"},
+				"ImageId" : {"Ref" : "elk1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "false",
+				"Tags": [ {"Key" : "Name","Value":"evise-elk1-cert"},{"Key": "Environment","Value": "CERT"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					}
+				],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+	    },
+		"elk2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "elk2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "false",
+				"Tags": [ { "Key" : "Name","Value":"evise-elk2-cert"},{"Key": "Environment","Value": "CERT"} ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					}
+				],
+				"SecurityGroupIds": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"KeyName" : { "Ref" : "KeyName" }
+			}
+		},
+		"elkELB1" : {
+			"Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+			"Properties" : {
+				"SecurityGroups" : [ { "Ref" : "ELBSecurityGroupID" } ],
+				"Subnets" : [ { "Ref" : "Subnet1A" }, { "Ref" : "Subnet1B" } ],
+				"Instances" : [ { "Ref" : "elk1" }, { "Ref" : "elk2" } ],
+				"CrossZone" : true,
+				"Listeners" : [ { "LoadBalancerPort" : "80", "InstancePort" : "5601", "Protocol" : "HTTP" } ],
+				"Scheme" : "internal",
+				"HealthCheck" : {
+					"Target" : "TCP:5601",
+					"HealthyThreshold" : "2",
+					"UnhealthyThreshold" : "10",
+					"Interval" : "30",
+					"Timeout" : "5"
+				}
+			}
+		},
+		"elkELB2" : {
+			"Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+			"Properties" : {
+				"SecurityGroups" : [ { "Ref" : "ELBSecurityGroupID" } ],
+				"Subnets" : [ { "Ref" : "Subnet1A" }, { "Ref" : "Subnet1B" } ],
+				"Instances" : [ { "Ref" : "elk1" }, { "Ref" : "elk2" } ],
+				"CrossZone" : true,
+				"Listeners" : [ { "LoadBalancerPort" : "80", "InstancePort" : "9200", "Protocol" : "HTTP" } ],
+				"Scheme" : "internal",
+				"HealthCheck" : {
+					"Target" : "TCP:9200",
+					"HealthyThreshold" : "2",
+					"UnhealthyThreshold" : "10",
+					"Interval" : "30",
+					"Timeout" : "5"
+				}
+			}
+		},
+		"elkELB1DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for public ELK in prod env.",
+				"Name" : "kibana.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["elkELB1","DNSName"]}
+				]
+			}
+		},
+		"elkELB2DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for public ELK in prod env.",
+				"Name" : "elasticsearch.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["elkELB2","DNSName"]}
+				]
+			}
+		},
+		"elk1DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal elk1 primary IP",
+				"Name" : "cert-evise-elk1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "elk1", "PrivateIp" ] } ]
+			}
+		},
+		"elk1hostnameDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal elk1 primary IP",
+				"Name" : "evise-elk1-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "elk1", "PrivateIp" ] } ]
+			}
+		},
+		"elk2DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal elk2 primary IP",
+				"Name" : "cert-evise-elk2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "elk2", "PrivateIp" ] } ]
+			}
+		},
+		"elk2hostnameDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for internal elk2 primary IP",
+				"Name" : "evise-elk2-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : [ "elk2", "PrivateIp" ] } ]
+			}
+		}
+	},
+	"Outputs" : {
+		"elk1InstanceID" : {
+			"Value" : { "Ref" : "elk1" },
+			"Description" : "Instance Id of elk1 instance"
+		},
+		"elk2InstanceID" : {
+			"Value" : { "Ref" : "elk2" },
+			"Description" : "Instance Id of elk2 instance"
+		},
+		"elk1PrimaryIPurl" : {
+			"Description" : "DNS record of the elk1 primary ip",
+			"Value" :  { "Ref" :  "elk1DNSRecord" }
+		},
+		"elk1hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the elk1 primary ip",
+			"Value" :  { "Ref" :  "elk1hostnameDNSRecord" }
+		},
+		"elk2PrimaryIPurl" : {
+			"Description" : "DNS record of the elk2 primary ip",
+			"Value" :  { "Ref" :  "elk2DNSRecord" }
+		},
+		"elk2hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the elk2 primary ip",
+			"Value" :  { "Ref" :  "elk2hostnameDNSRecord" }
+		},
+		"elkSQSQueueName1" : {
+			"Description" : "Description of the ELK Queue",
+			"Value" : { "Ref" : "eviseCertLogstashQ1"}
+		},
+		"elkSQSQueueName2" : {
+			"Description" : "Description of the ELK Queue",
+			"Value" : { "Ref" : "eviseCertLogstashQ2"}
+		}
+	}
+}

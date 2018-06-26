@@ -1,0 +1,6 @@
+---
+
+- hosts: tag_Role_osb_managed
+  roles:
+    - role: osb-managed
+      type: "managed"

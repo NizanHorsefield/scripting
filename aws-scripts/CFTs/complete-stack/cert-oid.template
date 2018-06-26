@@ -1,0 +1,321 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+ 
+"Description": "Template to create oid instances & internal ELBs for Certification environment. Creates network interface with multiple dynamic IP addresses(via dhcp). Creates Route 53 Record sets(A & CNAME). Uses RHEL5.9 AMI. Security Groups for Instance & ELB are created through sg-evise-cert stack & evise-cert-elb-sg stack respectively. Installation Media Binary Files are attached as EBS volume using snapshot (snap-ee4a1c09), which will be deleted on instance termination. Instance Root volume won't be deleted on instance Termination. Instances are protected from accidental termination by setting DisableApiTermination attribute true. Output will display Instance ID, Route 53 Record set names.",
+
+	"Parameters": {
+		"VPC" : {
+			"Type" : "String",
+			"Default":"vpc-1b2eee70",
+			"Description" : "VpcId of your existing Virtual Private Cloud (VPC)"
+		},
+		"DNSDomain" : {
+            "Type" : "String",
+            "Description" : "Name of an existing Route 53 DNS domain (e.g., mydomain.com)",
+			"Default": "evise-cloud.com"
+        },
+		"oid1AMIID": {
+			"Description": "AMI ID for oid1 Instance",
+			"Type": "String",
+			"Default": "ami-3965a54e"
+		},
+		"oid2AMIID": {
+			"Description": "AMI ID for oid2 Instance",
+			"Type": "String",
+			"Default": "ami-5765a520"
+		},
+		"Instancetype" : {
+			"Description": "Instance Type for certification Instances",
+			"Default": "m1.xlarge",
+			"Type": "String"
+		},
+		"KeyName" : {
+			"Description" : "Name of an existing KeyPair to enable SSH access to the instance",
+			"Default":"evise-developer1",
+			"Type" : "String"
+		},
+		"Subnet1A" :  {
+			"Description": "eu-west-1a instance subnet",
+			"Default": "subnet-6330f008",
+			"Type": "String"
+		},
+		"Subnet1B" :  {
+			"Description": "eu-west-1b instance subnet",
+			"Default": "subnet-f830f093",
+			"Type": "String"
+		},
+		"SecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-oid",
+			"Default": "sg-989e84fa",
+			"Type": "String"
+		},
+		"oidELBSecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-oid-elb",
+			"Default": "sg-4e07f92b",
+			"Type": "String"
+		},
+		"ovdELBSecurityGroupID": {
+			"Description": "Security Group ID for security group sg-evise-cert-ovd-elb",
+			"Default": "sg-1646b873",
+			"Type": "String"
+		},
+		"SecondaryIPAddressCount1a" : {
+			"Type" : "Number",
+			"Default" : "1",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		},
+		"SecondaryIPAddressCount1b" : {
+			"Type" : "Number",
+			"Default" : "1",
+			"MinValue" : "1",
+			"MaxValue" : "10",
+			"Description" : "Number of secondary IP addresses to assign to the network interface (1-10)",
+			"ConstraintDescription": "must be a number from 1 to 10."
+		}
+	},
+	"Resources" : {
+		"oid1" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "oid1AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ {"Key" : "Name","Value":"evise-oid1-cert"}],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0OID1"}, "DeviceIndex" : "0" } ]
+			}
+	    },
+		"Eth0OID1" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"oid1-cert-nic"}],
+				"Description": "NIC for oid1 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1A" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1a" }
+			}
+		},
+		"oid2" : {
+			"Type" : "AWS::EC2::Instance",
+			"Properties" : {
+				"ImageId" : {"Ref" : "oid2AMIID" },
+				"InstanceType" : {"Ref" : "Instancetype" },
+				"DisableApiTermination" : "true",
+				"Tags": [ { "Key" : "Name","Value":"evise-oid2-cert"} ],
+				"BlockDeviceMappings" : [ 
+					{ 	"DeviceName" : "/dev/sda1",
+						"Ebs" : { "VolumeSize" : "120", "DeleteOnTermination":"false" } 
+					},
+					{	"DeviceName":"/dev/sdh",
+						"Ebs":{
+							"SnapshotId":"snap-ee4a1c09",
+							"VolumeType":"standard",
+							"DeleteOnTermination":"true"
+						} 
+					} 
+				],
+				"KeyName" : { "Ref" : "KeyName" },
+				"NetworkInterfaces" : [ {
+					"NetworkInterfaceId" : {"Ref" : "Eth0OID2"}, "DeviceIndex" : "0"  } ]
+			}
+		},
+		"Eth0OID2" : {
+			"Type" : "AWS::EC2::NetworkInterface",
+			"Properties" : {
+				"Tags": [{"Key":"Name","Value":"oid2-cert-nic"}],
+				"Description": "NIC for oid2 in cert env.",
+				"SourceDestCheck": "false",
+				"GroupSet": [{ "Ref" : "SecurityGroupID" }],
+				"SubnetId": { "Ref" : "Subnet1B" },
+				"SecondaryPrivateIpAddressCount" : { "Ref" : "SecondaryIPAddressCount1b" }
+			}
+		},
+		"oidELB" : {
+			"Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+			"Properties" : {
+				"SecurityGroups" : [ { "Ref" : "oidELBSecurityGroupID" } ],
+				"Subnets" : [ { "Ref" : "Subnet1A" }, { "Ref" : "Subnet1B" } ],
+				"Instances" : [ { "Ref" : "oid1" }, { "Ref" : "oid2" } ],
+				"CrossZone" : true,
+				"Listeners" : [ { "LoadBalancerPort" : "26874", "InstancePort" : "26874", "Protocol" : "TCP" } ],
+				"Scheme" : "internal",
+				"HealthCheck" : {
+					"Target" : "TCP:26874",
+					"HealthyThreshold" : "2",
+					"UnhealthyThreshold" : "10",
+					"Interval" : "30",
+					"Timeout" : "5"
+				}
+			}
+		},
+		"ovdELB" : {
+			"Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+			"Properties" : {
+				"SecurityGroups" : [ { "Ref" : "ovdELBSecurityGroupID" } ],
+				"Subnets" : [ { "Ref" : "Subnet1A" }, { "Ref" : "Subnet1B" } ],
+				"Instances" : [ { "Ref" : "oid1" }, { "Ref" : "oid2" } ],
+				"CrossZone" : true,
+				"Listeners" : [ { "LoadBalancerPort" : "26871", "InstancePort" : "26871", "Protocol" : "TCP" } ],
+				"Scheme" : "internal",
+				"HealthCheck" : {
+					"Target" : "TCP:26871",
+					"HealthyThreshold" : "2",
+					"UnhealthyThreshold" : "10",
+					"Interval" : "30",
+					"Timeout" : "5"
+				}
+			}
+		},
+		"oid101DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oid1 primary IP",
+				"Name" : "cert-evise-idm-oid1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0OID1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"oid102DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oid1 secondary IP",
+				"Name" : "cert-evise-idm-ovd1.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0OID1", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"oid103DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oid1 primary IP",
+				"Name" : "evise-oid1-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0OID1", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"oid201DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oid2 primary IP",
+				"Name" : "cert-evise-idm-oid2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0OID2", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"oid202DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oid2 secondary IP",
+				"Name" : "cert-evise-idm-ovd2.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::Select" : [ "0", { "Fn::GetAtt" : ["Eth0OID2", "SecondaryPrivateIpAddresses"] }]} ]
+			}
+		},
+		"oid203DNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oid2 primary IP",
+				"Name" : "evise-oid2-cert.evise-cloud.com.",
+				"Type" : "A",
+				"TTL" : "300",
+				"ResourceRecords" : [ { "Fn::GetAtt" : ["Eth0OID2", "PrimaryPrivateIpAddress"] } ]
+			}
+		},
+		"oidELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for oid ELB in prod env.",
+				"Name" : "cert-i-oid.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["oidELB","DNSName"]}
+				]
+			}
+		},
+		"ovdELBDNSRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Properties" : {
+				"HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "DNSDomain" }, "." ] ] },
+				"Comment" : "DNS record for ovd ELB in prod env.",
+				"Name" : "cert-i-ovd.evise-cloud.com.",
+				"Type" : "CNAME",
+				"TTL" : "300",
+				"ResourceRecords" : [
+				{"Fn::GetAtt":["ovdELB","DNSName"]}
+				]
+			}
+		}
+	},
+	"Outputs" : {
+		"oid1InstanceID" : {
+			"Value" : { "Ref" : "oid1" },
+			"Description" : "Instance Id of oid1 instance"
+		},
+		"oid2InstanceID" : {
+			"Value" : { "Ref" : "oid2" },
+			"Description" : "Instance Id of oid2 instance"
+		},
+		"oid1PrimaryIPurl" : {
+			"Description" : "DNS record of the oid1 primary ip",
+			"Value" :  { "Ref" :  "oid101DNSRecord" }
+		},
+		"oid1SecondaryIPurl" : {
+			"Description" : "DNS record of the oid1 secondary ip",
+			"Value" :  { "Ref" :  "oid102DNSRecord" }
+		},
+		"oid1hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the oid1 primary ip",
+			"Value" :  { "Ref" :  "oid103DNSRecord" }
+		},
+		"oid2PrimaryIPurl" : {
+			"Description" : "DNS record of the oid2 primary ip",
+			"Value" :  { "Ref" :  "oid201DNSRecord" }
+		},
+		"oid2SecondaryIPurl" : {
+			"Description" : "DNS record of the oid2 secondary ip",
+			"Value" :  { "Ref" :  "oid202DNSRecord" }
+		},
+		"oid2hostnamePrimaryIPurl" : {
+			"Description" : "DNS record of the oid2 primary ip",
+			"Value" :  { "Ref" :  "oid203DNSRecord" }
+		},
+		"oidELBurl" : {
+			"Description" : "DNS record of the oid elb",
+			"Value" :  { "Ref" :  "oidELBDNSRecord" }
+		},
+		"ovdELBurl" : {
+			"Description" : "DNS record of the ovd elb",
+			"Value" :  { "Ref" :  "ovdELBDNSRecord" }
+		}
+	}
+}

@@ -1,0 +1,6 @@
+---
+
+- name: oem-config
+  src: git@gitlab.et-scm.com:rap-evise-oracle/ansible-role-oem-config.git
+  scm: git
+

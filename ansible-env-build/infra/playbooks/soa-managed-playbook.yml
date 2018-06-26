@@ -1,0 +1,6 @@
+---
+
+- hosts: tag_Role_soa_managed
+  roles:
+    - role: soa-managed
+      type: "managed"
